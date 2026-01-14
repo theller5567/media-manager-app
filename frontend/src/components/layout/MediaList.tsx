@@ -53,7 +53,7 @@ const MediaList = () => {
       </div>
 
       {/* View Content - flex-1 to fill space, pb-10 ensures 40px from bottom */}
-      <div className="flex-1 min-h-0 flex flex-col pb-10">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {viewMode === "grid" ? (
           <>
             {isLoading && !hasResults ? (
@@ -61,32 +61,37 @@ const MediaList = () => {
                 <LoadingSkeleton count={6} className="aspect-video" />
               </div>
             ) : hasResults ? (
-              <>
-                <div className="grid mb-6 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-6">
-                  {paginatedData.map((item) => (
-                    <div
-                      key={item.id}
-                      className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden"
-                    >
-                      <LazyImage
-                        src={item.thumbnail}
-                        alt={item.filename}
-                        className="w-full h-full"
-                        mediaType={item.mediaType}
-                      />
-                    </div>
-                  ))}
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Scrollable grid container */}
+                <div className="flex-1 min-h-0 overflow-y-auto pb-10">
+                  <div className="grid mb-6 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-6">
+                    {paginatedData.map((item) => (
+                      <div
+                        key={item.id}
+                        className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden"
+                      >
+                        <LazyImage
+                          src={item.thumbnail}
+                          alt={item.filename}
+                          className="w-full h-full"
+                          mediaType={item.mediaType}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {/* Pagination controls */}
+                {/* Pagination controls - fixed at bottom */}
                 {totalPages > 1 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setPage}
-                    isLoading={isLoading}
-                  />
+                  <div className="shrink-0 pt-4 border-t border-slate-700">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setPage}
+                      isLoading={isLoading}
+                    />
+                  </div>
                 )}
-              </>
+              </div>
             ) : (
               <div className="col-span-full text-center py-12 flex-1 flex items-center justify-center">
                 <p className="text-slate-400">
@@ -97,7 +102,7 @@ const MediaList = () => {
           </>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="flex-1 min-h-0" >
+            <div className="flex-1 min-h-0">
               <MediaTable />
             </div>
           </div>
