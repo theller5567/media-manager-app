@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDebounce } from './useDebounce';
-import { filterMediaItems, type MediaItem } from '@/lib/mediaUtils';
+import type { MediaItem } from '@/lib/mediaUtils';
 import { paginateArray, getTotalPages, hasMorePages } from '@/lib/paginationUtils';
 import { useUIStore } from '@/store/uiStore';
+import { combineFilters } from '@/lib/filteringUtils';
+import { sortMediaItems } from '@/lib/sortingUtils';
 
 interface UsePaginatedMediaOptions {
   allData: MediaItem[];
@@ -33,6 +35,12 @@ export function usePaginatedMedia({
 }: UsePaginatedMediaOptions): UsePaginatedMediaReturn {
   const {
     searchQuery,
+    sortBy,
+    sortDirection,
+    secondarySortBy,
+    secondarySortDirection,
+    selectedMediaTypes,
+    selectedTags,
     currentPage,
     pageSize,
     isLoading,
@@ -48,29 +56,44 @@ export function usePaginatedMedia({
   // Debounce search query
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Filter data based on search query
+  // Apply filters: search → media type → tags
   const filteredData = useMemo(() => {
-    return filterMediaItems(allData, debouncedQuery);
-  }, [allData, debouncedQuery]);
+    return combineFilters(
+      allData,
+      debouncedQuery,
+      selectedMediaTypes,
+      selectedTags
+    );
+  }, [allData, debouncedQuery, selectedMediaTypes, selectedTags]);
 
-  // Calculate total pages
+  // Apply sorting after filtering
+  const sortedData = useMemo(() => {
+    return sortMediaItems(filteredData, {
+      sortBy,
+      sortDirection,
+      secondarySortBy,
+      secondarySortDirection,
+    });
+  }, [filteredData, sortBy, sortDirection, secondarySortBy, secondarySortDirection]);
+
+  // Calculate total pages based on sorted data
   const totalPages = useMemo(() => {
-    return getTotalPages(filteredData.length, pageSize);
-  }, [filteredData.length, pageSize]);
+    return getTotalPages(sortedData.length, pageSize);
+  }, [sortedData.length, pageSize]);
 
   // State for accumulated pages (table/infinite scroll mode)
   const [loadedPages, setLoadedPages] = useState<number[]>([1]);
 
-  // Reset pagination when search query changes
+  // Reset pagination when filters or sorting change
   useEffect(() => {
     resetPagination();
     setLoadedPages([1]);
-  }, [debouncedQuery, resetPagination]);
+  }, [debouncedQuery, selectedMediaTypes, selectedTags, sortBy, sortDirection, secondarySortBy, resetPagination]);
 
-  // Update total count
+  // Update total count based on sorted data
   useEffect(() => {
-    setTotalCount(filteredData.length);
-  }, [filteredData.length, setTotalCount]);
+    setTotalCount(sortedData.length);
+  }, [sortedData.length, setTotalCount]);
 
   // Update hasMore based on current page and total pages
   useEffect(() => {
@@ -95,27 +118,27 @@ export function usePaginatedMedia({
     }
   }, [loadedPages, mode, setIsLoading]);
 
-  // Get data based on mode
+  // Get data based on mode (using sorted data)
   const data = useMemo(() => {
     // Ensure we have data to work with
-    if (!filteredData || filteredData.length === 0) {
+    if (!sortedData || sortedData.length === 0) {
       return [];
     }
     
     if (mode === 'grid') {
       // Grid mode: return single page
-      const pageData = paginateArray(filteredData, currentPage, pageSize);
+      const pageData = paginateArray(sortedData, currentPage, pageSize);
       return pageData;
     } else {
       // Table mode: return all loaded pages accumulated
       const allLoadedItems: MediaItem[] = [];
       loadedPages.forEach((page) => {
-        const pageData = paginateArray(filteredData, page, pageSize);
+        const pageData = paginateArray(sortedData, page, pageSize);
         allLoadedItems.push(...pageData);
       });
       return allLoadedItems;
     }
-  }, [filteredData, currentPage, pageSize, mode, loadedPages]);
+  }, [sortedData, currentPage, pageSize, mode, loadedPages]);
 
   const setPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {

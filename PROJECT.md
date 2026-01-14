@@ -25,6 +25,12 @@
 
 **Media Manager App** is an AI-enhanced media management platform for organizations to organize, store, and manage digital assets with customizable metadata, hierarchical tagging, and enterprise integrations.
 
+### Main reasoning for creating this app
+- Prevent users from adding media without proper meta-data and information
+- Maintain a highly searchable media database that is centered around a companies workflow - allowing custom mediaTypes
+- Coming up with names and descriptions and tags can be very daunting sometimes so adding the ability to have AI assist was crucial.
+- I am not a fan of folder structures and feel like folders muddy the waters when too many users are using the same system.
+
 ### Key Capabilities
 - Unified media library (images, videos, documents, audio)
 - AI-powered auto-tagging and semantic search

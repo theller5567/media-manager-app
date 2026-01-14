@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import MediaLibrary from './pages/MediaLibrary'
+import MediaTypeCreator from './pages/MediaTypeCreator'
 
 // Placeholder Page Components
 const Dashboard = () => (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/library" element={<MediaLibrary />} />
           <Route path="/tags" element={<TagManagement />} />
+          <Route path="/media-type-creator" element={<MediaTypeCreator />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

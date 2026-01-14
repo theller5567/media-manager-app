@@ -27,13 +27,13 @@ export interface MediaItem {
 export const getMediaTypeIcon = (mediaType: MediaType): React.ReactElement => {
   switch (mediaType) {
     case "image":
-      return <FileImage className="h-4 w-4 text-blue-500" />;
+      return <FileImage className="h-4 w-4 text-cyan-500" />;
     case "video":
-      return <FileVideo className="h-4 w-4 text-red-500" />;
+      return <FileVideo className="h-4 w-4 text-pink-500" />;
     case "audio":
-      return <FileAudio className="h-4 w-4 text-green-500" />;
+      return <FileAudio className="h-4 w-4 text-emerald-500" />;
     case "document":
-      return <FileText className="h-4 w-4 text-orange-500" />;
+      return <FileText className="h-4 w-4 text-violet-500" />;
     default:
       return <File className="h-4 w-4 text-gray-500" />;
   }

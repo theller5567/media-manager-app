@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Library, Tag, User, Settings } from 'lucide-react'
+import { LayoutDashboard, Library, Tag, User, Settings, Plus } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Media Library', href: '/library', icon: Library },
   { label: 'Tag Management', href: '/tags', icon: Tag },
+  { label: 'Media Type Creator', href: '/media-type-creator', icon: Plus },
   { label: 'Profile', href: '/profile', icon: User },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]

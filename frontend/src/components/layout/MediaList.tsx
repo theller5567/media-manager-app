@@ -7,10 +7,15 @@ import ViewToggle from "../ui/viewToggle";
 import Pagination from "../ui/Pagination";
 import LazyImage from "../ui/LazyImage";
 import LoadingSkeleton from "../ui/LoadingSkeleton";
+import MediaFilters from "../ui/MediaFilters";
+import { getAvailableTags } from "@/lib/filteringUtils";
 
 const MediaList = () => {
   const { viewMode } = useViewMode();
   const { searchQuery, setSearchQuery } = useSearchQuery();
+
+  // Extract available tags from mock data
+  const availableTags = getAvailableTags(mockMediaData || []);
 
   // Use paginated media hook based on view mode
   // Hook handles debouncing internally
@@ -49,7 +54,10 @@ const MediaList = () => {
             </span>
           )}
         </div>
-        <ViewToggle />
+        <div className="flex items-center gap-2">
+          <MediaFilters availableTags={availableTags} />
+          <ViewToggle />
+        </div>
       </div>
 
       {/* View Content - flex-1 to fill space, pb-10 ensures 40px from bottom */}
