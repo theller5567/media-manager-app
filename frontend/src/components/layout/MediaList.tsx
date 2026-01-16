@@ -1,5 +1,6 @@
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import MediaTable from "./MediaTable";
-import { mockMediaData } from "@/data/mockMediaData";
 import { useViewMode, useSearchQuery } from "@/store/uiStore";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
 import { Search } from "lucide-react";
@@ -9,13 +10,26 @@ import LazyImage from "../ui/LazyImage";
 import LoadingSkeleton from "../ui/LoadingSkeleton";
 import MediaFilters from "../ui/MediaFilters";
 import { getAvailableTags } from "@/lib/filteringUtils";
+import { useMemo } from "react";
 
 const MediaList = () => {
   const { viewMode } = useViewMode();
   const { searchQuery, setSearchQuery } = useSearchQuery();
 
-  // Extract available tags from mock data
-  const availableTags = getAvailableTags(mockMediaData || []);
+  // Fetch media from Convex
+  const mediaData = useQuery(api.queries.media.list) || [];
+  
+  // Convert Convex data to MediaItem format (with id as string)
+  const mediaItems = useMemo(() => {
+    return mediaData.map((item: any) => ({
+      ...item,
+      id: item._id,
+      dateModified: new Date(item.dateModified),
+    }));
+  }, [mediaData]);
+
+  // Extract available tags from Convex data
+  const availableTags = getAvailableTags(mediaItems);
 
   // Use paginated media hook based on view mode
   // Hook handles debouncing internally
@@ -27,7 +41,7 @@ const MediaList = () => {
     totalPages,
     setPage,
   } = usePaginatedMedia({
-    allData: mockMediaData || [],
+    allData: mediaItems,
     mode: viewMode === 'grid' ? 'grid' : 'table',
   });
 
@@ -50,7 +64,7 @@ const MediaList = () => {
           </div>
           {isFiltering && (
             <span className="text-sm text-slate-400 ml-4">
-              {totalCount} of {mockMediaData.length} results
+              {totalCount} of {mediaItems.length} results
             </span>
           )}
         </div>

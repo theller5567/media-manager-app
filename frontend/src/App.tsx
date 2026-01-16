@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import MediaLibrary from './pages/MediaLibrary'
 import MediaTypeCreator from './pages/MediaTypeCreator'
+import MediaDetail from './pages/MediaDetail'
 
 // Placeholder Page Components
 const Dashboard = () => (
@@ -43,6 +44,7 @@ function App() {
           <Route path="/media-type-creator" element={<MediaTypeCreator />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/media/:mediaId" element={<MediaDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>

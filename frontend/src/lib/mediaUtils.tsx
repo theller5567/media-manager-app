@@ -6,6 +6,7 @@ import {
   FileText,
   File,
 } from "lucide-react";
+import { getMediaTypeById } from "@/data/mockMediaTypes";
 
 export type MediaType = "image" | "video" | "audio" | "document" | "other";
 
@@ -14,30 +15,64 @@ export interface MediaItem {
   filename: string;
   thumbnail: string;
   mediaType: MediaType;
+  customMediaTypeId?: string; // Link to MediaType if selected
+  title: string; // Required - Generated from filename if not provided
+  description?: string;
+  altText?: string;
   fileSize: number;
   tags: string[];
   dateModified: Date;
+  relatedFiles?: string[]; // IDs of related media items
+  customMetadata?: Record<string, any>; // Custom field values
+  aiGenerated?: boolean;
 }
 
 /**
- * Returns the appropriate Lucide icon for a given media type
+ * Returns the appropriate Lucide icon component for a given media type
  * @param mediaType - The type of media file
- * @returns React component for the media type icon
+ * @returns React component type for the media type icon
  */
-export const getMediaTypeIcon = (mediaType: MediaType): React.ReactElement => {
+export const getMediaTypeIcon = (mediaType: MediaType): React.ComponentType<{ className?: string }> => {
   switch (mediaType) {
     case "image":
-      return <FileImage className="h-4 w-4 text-cyan-500" />;
+      return FileImage;
     case "video":
-      return <FileVideo className="h-4 w-4 text-pink-500" />;
+      return FileVideo;
     case "audio":
-      return <FileAudio className="h-4 w-4 text-emerald-500" />;
+      return FileAudio;
     case "document":
-      return <FileText className="h-4 w-4 text-violet-500" />;
+      return FileText;
     default:
-      return <File className="h-4 w-4 text-gray-500" />;
+      return File;
   }
 };
+
+/**
+ * Get media type by customMediaTypeId
+ * @param customMediaTypeId - The ID of the custom MediaType (e.g., "1", "2")
+ * @returns The MediaType object or undefined if not found
+ */
+export function getCustomMediaTypeById(customMediaTypeId?: string): string | undefined {
+  if(!customMediaTypeId) {
+    return undefined;
+  }
+  const mediaType = getMediaTypeById(customMediaTypeId);
+  return mediaType?.name || "Standard";
+}
+
+/**
+ * Get media type color from customMediaTypeId
+ * @param customMediaTypeId - The ID of the custom MediaType (e.g., "1", "2")
+ * @returns Hex color string (e.g., "#ff9900") or default cyan-500 if not found
+ */
+export function getMediaTypeColor(customMediaTypeId?: string): string {
+  if (!customMediaTypeId) {
+    return '#06b6d4'; // cyan-500 default
+  }
+  
+  const mediaType = getMediaTypeById(customMediaTypeId);
+  return mediaType?.color || '#06b6d4'; // Fallback to cyan-500 if not found
+}
 
 /**
  * Formats file size in human-readable format

@@ -1,4 +1,6 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { useReactTable, getCoreRowModel, type ColumnDef, flexRender } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -13,8 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { getMediaTypeIcon, formatFileSize, type MediaItem } from "@/lib/mediaUtils";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
-import { mockMediaData } from "@/data/mockMediaData";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { Link } from "react-router-dom";
+import { getMediaTypeColor, getCustomMediaTypeById } from "@/lib/mediaUtils";
 
 const columns: ColumnDef<MediaItem>[] = [
   {
@@ -22,6 +25,7 @@ const columns: ColumnDef<MediaItem>[] = [
     header: "Thumbnail",
     cell: ({ row }) => {
       const item = row.original;
+      const Icon = getMediaTypeIcon(item.mediaType);
       return (
         <div className="w-12 h-12 rounded border overflow-hidden bg-gray-100 flex items-center justify-center">
           {item.thumbnail ? (
@@ -31,20 +35,20 @@ const columns: ColumnDef<MediaItem>[] = [
               className="w-full h-full object-cover"
             />
           ) : (
-            getMediaTypeIcon(item.mediaType)
+            React.createElement(Icon, { className: "h-6 w-6 text-slate-400" })
           )}
         </div>
       );
     },
   },
   {
-    accessorKey: "filename",
-    header: "Filename",
+    accessorKey: "title",
+    header: "Title",
     cell: ({ row }) => {
-      const filename = row.getValue("filename") as string;
+      const title = row.getValue("title") as string;
       return (
-        <div className="font-medium text-sm max-w-xs truncate" title={filename}>
-          {filename}
+        <div className="font-medium text-sm max-w-xs truncate" title={title}>
+          <Link to={`/media/${row.original.id}`}>{title}</Link>
         </div>
       );
     },
@@ -54,9 +58,14 @@ const columns: ColumnDef<MediaItem>[] = [
     header: "Type",
     cell: ({ row }) => {
       const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
+      const IconComponent = getMediaTypeIcon(mediaType);
+      const mediaColor = getMediaTypeColor(row.original.customMediaTypeId);
+      
       return (
         <div className="flex items-center gap-2">
-          {getMediaTypeIcon(mediaType)}
+          <span style={{ color: mediaColor }}>
+            {React.createElement(IconComponent, { className: "h-4 w-4" })}
+          </span>
           <span className="text-sm capitalize">{mediaType}</span>
         </div>
       );
@@ -70,6 +79,19 @@ const columns: ColumnDef<MediaItem>[] = [
       return (
         <span className="text-sm text-gray-600">
           {formatFileSize(fileSize)}
+        </span>
+      );
+    },
+  },
+  {
+    accessorKey: "customMediaTypeId",
+    header: "Custom Type",
+    cell: ({ row }) => {
+      const customMediaTypeId = row.getValue("customMediaTypeId") as string;
+      const customMediaTypeName = getCustomMediaTypeById(customMediaTypeId);
+      return (
+        <span className="text-sm text-gray-600">
+          {customMediaTypeName}
         </span>
       );
     },
@@ -114,9 +136,21 @@ interface MediaTableProps {
 }
 
 export const MediaTable: React.FC<MediaTableProps> = () => {
+  // Fetch media from Convex
+  const mediaData = useQuery(api.queries.media.list) || [];
+  
+  // Convert Convex data to MediaItem format
+  const mediaItems = useMemo(() => {
+    return mediaData.map((item: any) => ({
+      ...item,
+      id: item._id,
+      dateModified: new Date(item.dateModified),
+    }));
+  }, [mediaData]);
+
   // Use paginated media hook for table mode (infinite scroll)
   const { data, isLoading, hasMore, loadMore } = usePaginatedMedia({
-    allData: mockMediaData,
+    allData: mediaItems,
     mode: 'table',
   });
 

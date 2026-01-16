@@ -22,6 +22,7 @@ const FIELD_TYPES: Array<{ value: CustomFieldType; label: string }> = [
 export function FieldBuilder({ fields, onChange, className }: FieldBuilderProps) {
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [selectOptionInputs, setSelectOptionInputs] = useState<Record<string, string>>({});
 
   const toggleFieldExpansion = (fieldId: string) => {
     const newExpanded = new Set(expandedFields);
@@ -63,6 +64,10 @@ export function FieldBuilder({ fields, onChange, className }: FieldBuilderProps)
         // Clear options if type changes away from select
         if (updates.type && updates.type !== 'select' && updated.options) {
           updated.options = undefined;
+          // Also clear the input state for this field
+          const newInputs = { ...selectOptionInputs };
+          delete newInputs[fieldId];
+          setSelectOptionInputs(newInputs);
         }
         
         return updated;
@@ -103,11 +108,24 @@ export function FieldBuilder({ fields, onChange, className }: FieldBuilderProps)
   };
 
   const updateSelectOptions = (fieldId: string, optionsString: string) => {
+    // Store the raw input value to allow typing commas freely
+    setSelectOptionInputs({
+      ...selectOptionInputs,
+      [fieldId]: optionsString,
+    });
+  };
+
+  const parseSelectOptions = (fieldId: string) => {
+    const optionsString = selectOptionInputs[fieldId] ?? '';
     const options = optionsString
       .split(',')
       .map((opt) => opt.trim())
       .filter((opt) => opt.length > 0);
     updateField(fieldId, { options: options.length > 0 ? options : undefined });
+    // Clear the input state after parsing so it falls back to field.options
+    const newInputs = { ...selectOptionInputs };
+    delete newInputs[fieldId];
+    setSelectOptionInputs(newInputs);
   };
 
   return (
@@ -275,13 +293,26 @@ export function FieldBuilder({ fields, onChange, className }: FieldBuilderProps)
                         </label>
                         <input
                           type="text"
-                          value={field.options?.join(', ') || ''}
+                          value={selectOptionInputs[field.id] !== undefined 
+                            ? selectOptionInputs[field.id] 
+                            : field.options?.join(', ') || ''}
                           onChange={(e) =>
                             updateSelectOptions(field.id, e.target.value)
                           }
+                          onBlur={() => parseSelectOptions(field.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              parseSelectOptions(field.id);
+                              e.currentTarget.blur();
+                            }
+                          }}
                           placeholder="Option 1, Option 2, Option 3"
                           className="w-full h-9 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                         />
+                        <p className="mt-1 text-xs text-slate-500">
+                          Type options separated by commas. Press Enter or click away to save.
+                        </p>
                       </div>
                     )}
 

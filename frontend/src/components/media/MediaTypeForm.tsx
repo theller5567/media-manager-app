@@ -184,6 +184,17 @@ export function MediaTypeForm({
   const handleStepClick = (stepIndex: number) => {
     if (!canNavigateToStep(stepIndex)) return;
 
+    // Don't allow clicking on the review step if we're not ready
+    // User must use Next button to reach review step
+    if (stepIndex === STEPS.length - 1 && currentStep < STEPS.length - 2) {
+      // Only allow direct navigation to review if all previous steps are completed
+      const allPreviousStepsComplete = Array.from({ length: STEPS.length - 1 }, (_, i) => i)
+        .every(step => completedSteps.has(step));
+      if (!allPreviousStepsComplete) {
+        return;
+      }
+    }
+
     // Validate current step before navigating away
     if (stepIndex !== currentStep) {
       const currentErrors = validateCurrentStep();
@@ -194,7 +205,10 @@ export function MediaTypeForm({
     }
 
     setCurrentStep(stepIndex);
-    setStepErrors({ ...stepErrors, [currentStep]: [] });
+    // Clear errors for the step we're navigating to
+    const newStepErrors = { ...stepErrors };
+    newStepErrors[stepIndex] = [];
+    setStepErrors(newStepErrors);
   };
 
   const validateCurrentStep = (): string[] => {
@@ -212,7 +226,13 @@ export function MediaTypeForm({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent) => {
+    // Prevent form submission if event is provided
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const currentErrors = validateCurrentStep();
     if (currentErrors.length > 0) {
       setStepErrors({ ...stepErrors, [currentStep]: currentErrors });
@@ -231,10 +251,18 @@ export function MediaTypeForm({
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = (e?: React.MouseEvent) => {
+    // Prevent form submission if event is provided
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-      setStepErrors({ ...stepErrors, [currentStep]: [] });
+      // Clear errors for the step we're navigating to
+      const newStepErrors = { ...stepErrors };
+      newStepErrors[currentStep - 1] = [];
+      setStepErrors(newStepErrors);
     }
   };
 
@@ -709,8 +737,28 @@ export function MediaTypeForm({
     }
   };
 
+  // Prevent form submission on Enter key press (except for submit button)
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // Only allow Enter to submit if we're on the review step and focus is on the submit button
+    if (e.key === 'Enter' && currentStep < STEPS.length - 1) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only submit if we're on the review step
+        if (currentStep === STEPS.length - 1) {
+          handleSubmit(e);
+        }
+      }}
+      onKeyDown={handleFormKeyDown}
+      className="space-y-6"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-white">
@@ -879,7 +927,11 @@ export function MediaTypeForm({
       <div className="flex items-center justify-between pt-4 border-t border-slate-700">
         <button
           type="button"
-          onClick={handlePrevious}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handlePrevious(e);
+          }}
           disabled={currentStep === 0}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-slate-600 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
@@ -898,7 +950,11 @@ export function MediaTypeForm({
           {currentStep < STEPS.length - 1 ? (
             <button
               type="button"
-              onClick={handleNext}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNext(e);
+              }}
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
             >
               Next
@@ -907,6 +963,11 @@ export function MediaTypeForm({
           ) : (
             <button
               type="submit"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSubmit(e);
+              }}
               className="px-4 py-2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
             >
               {mediaType ? 'Update MediaType' : 'Create MediaType'}

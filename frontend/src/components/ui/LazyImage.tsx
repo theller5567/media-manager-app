@@ -58,13 +58,15 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     setIsLoaded(false);
   };
 
+  const IconComponent = getMediaTypeIcon(mediaType);
+
   // If src is empty, show placeholder immediately
   if (!src || src.trim() === '') {
     return (
       <div className={className}>
         {placeholder || (
           <div className="w-full h-full flex items-center justify-center bg-slate-700">
-            {getMediaTypeIcon(mediaType)}
+            {React.createElement(IconComponent, { className: "h-8 w-8 text-slate-400" })}
           </div>
         )}
       </div>
@@ -77,13 +79,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         // Placeholder while not in viewport
         placeholder || (
           <div className="w-full h-full flex items-center justify-center bg-slate-700">
-            {getMediaTypeIcon(mediaType)}
+            {React.createElement(IconComponent, { className: "h-8 w-8 text-slate-400" })}
           </div>
         )
       ) : hasError ? (
         // Error fallback
         <div className="w-full h-full flex items-center justify-center bg-slate-700">
-          {getMediaTypeIcon(mediaType)}
+          {React.createElement(IconComponent, { className: "h-8 w-8 text-slate-400" })}
         </div>
       ) : (
         // Image with fade-in effect
