@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Eye, FileText, File, Settings, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import type { MediaType, CustomField } from '@/types/mediaType';
 import { validateMediaType, validateFieldName } from '@/lib/mediaTypeUtils';
-import { getAllMediaTypes } from '@/data/mockMediaTypes';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { FormatSelector } from './FormatSelector';
 import { FieldBuilder } from './FieldBuilder';
@@ -75,7 +76,17 @@ export function MediaTypeForm({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
 
-  const existingMediaTypes = useMemo(() => getAllMediaTypes(), []);
+  // Fetch MediaTypes from Convex
+  const mediaTypesData = useQuery(api.queries.mediaTypes.list);
+  const existingMediaTypes = useMemo(() => {
+    if (!mediaTypesData) return [];
+    return mediaTypesData.map((mt: any) => ({
+      ...mt,
+      id: mt._id,
+      createdAt: new Date(mt.createdAt), // Convert number to Date object
+      updatedAt: new Date(mt.updatedAt), // Convert number to Date object
+    }));
+  }, [mediaTypesData]);
 
   useEffect(() => {
     if (mediaType) {

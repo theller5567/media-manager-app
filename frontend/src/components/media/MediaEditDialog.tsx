@@ -4,7 +4,6 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { MediaItem } from "@/lib/mediaUtils";
 import { getMediaTypeIcon } from "@/lib/mediaUtils";
-import { getMediaTypeById } from "@/data/mockMediaTypes";
 import { getAvailableTags } from "@/lib/filteringUtils";
 import type { CustomField } from "@/types/mediaType";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -47,13 +46,23 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
   const updateMedia = useMutation(api.mutations.media.update);
   const allMediaItems = useQuery(api.queries.media.list);
 
+  // Fetch MediaType from Convex if customMediaTypeId exists
+  const mediaTypeDoc = useQuery(
+    api.queries.mediaTypes.getById,
+    media.customMediaTypeId ? { id: media.customMediaTypeId as Id<"mediaTypes"> } : "skip"
+  );
+  
   // Get MediaType definition if customMediaTypeId exists
   const mediaType = useMemo(() => {
-    if (media.customMediaTypeId) {
-      return getMediaTypeById(media.customMediaTypeId);
-    }
-    return undefined;
-  }, [media.customMediaTypeId]);
+    if (!mediaTypeDoc) return undefined;
+    // Convert timestamps to Date objects
+    return {
+      ...mediaTypeDoc,
+      id: mediaTypeDoc._id,
+      createdAt: new Date(mediaTypeDoc.createdAt), // Convert number to Date object
+      updatedAt: new Date(mediaTypeDoc.updatedAt), // Convert number to Date object
+    };
+  }, [mediaTypeDoc]);
 
   // Get available tags from all media items
   const availableTags = useMemo(() => {

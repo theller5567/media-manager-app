@@ -17,6 +17,7 @@ import { Step5Review } from './upload/Step5Review';
 import { PostUploadModal } from './PostUploadModal';
 import type { MediaItem } from '@/lib/mediaUtils';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const STEPS: Step[] = [
   {
@@ -59,6 +60,7 @@ interface MediaUploadProps {
 
 export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploadProps) {
   const uploadState = useMediaUpload();
+  const navigate = useNavigate();
   const [showPostUploadModal, setShowPostUploadModal] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<MediaItem[]>([]);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -162,18 +164,20 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
   };
 
   const handlePostUploadAction = (action: 'add-another' | 'view-details' | 'go-to-library', fileId?: string) => {
-    setShowPostUploadModal(false);
-
     switch (action) {
       case 'add-another':
+        setShowPostUploadModal(false);
         uploadState.reset();
         uploadState.goToStep(0);
         break;
       case 'view-details':
         if (fileId) {
+          // Close modal first
+          setShowPostUploadModal(false);
+          // Close upload dialog
           onOpenChange(false);
-          // Navigate to detail page (would be handled by router in real app)
-          console.log('Navigate to file:', fileId);
+          // Navigate to detail page
+          navigate(`/media/${fileId}`);
         }
         break;
       case 'go-to-library':

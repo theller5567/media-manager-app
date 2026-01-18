@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { getMediaTypeIcon, formatFileSize, type MediaItem } from "@/lib/mediaUtils";
+import { getMediaTypeIcon, formatFileSize, type MediaItem, getMediaTypeColor, getCustomMediaTypeById } from "@/lib/mediaUtils";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { Link } from "react-router-dom";
-import { getMediaTypeColor, getCustomMediaTypeById } from "@/lib/mediaUtils";
+import type { MediaType } from "@/types/mediaType";
 
 const columns: ColumnDef<MediaItem>[] = [
   {
@@ -56,10 +56,14 @@ const columns: ColumnDef<MediaItem>[] = [
   {
     accessorKey: "mediaType",
     header: "Type",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
       const IconComponent = getMediaTypeIcon(mediaType);
-      const mediaColor = getMediaTypeColor(row.original.customMediaTypeId);
+      // Get MediaType object from context (passed via table meta)
+      const customMediaType = row.original.customMediaTypeId 
+        ? (table.options.meta as any)?.getMediaType?.(row.original.customMediaTypeId)
+        : undefined;
+      const mediaColor = getMediaTypeColor(customMediaType);
       
       return (
         <div className="flex items-center gap-2">
@@ -86,9 +90,13 @@ const columns: ColumnDef<MediaItem>[] = [
   {
     accessorKey: "customMediaTypeId",
     header: "Custom Type",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const customMediaTypeId = row.getValue("customMediaTypeId") as string;
-      const customMediaTypeName = getCustomMediaTypeById(customMediaTypeId);
+      // Get MediaType object from context (passed via table meta)
+      const customMediaType = customMediaTypeId 
+        ? (table.options.meta as any)?.getMediaType?.(customMediaTypeId)
+        : undefined;
+      const customMediaTypeName = getCustomMediaTypeById(customMediaType);
       return (
         <span className="text-sm text-gray-600">
           {customMediaTypeName}
@@ -138,6 +146,22 @@ interface MediaTableProps {
 export const MediaTable: React.FC<MediaTableProps> = () => {
   // Fetch media from Convex
   const mediaData = useQuery(api.queries.media.list) || [];
+  // Fetch MediaTypes from Convex
+  const mediaTypesData = useQuery(api.queries.mediaTypes.list) || [];
+  
+  // Create MediaType lookup map by ID
+  const mediaTypesMap = useMemo(() => {
+    const map = new Map<string, MediaType>();
+    mediaTypesData.forEach((mt) => {
+      map.set(mt._id, { 
+        ...mt, 
+        id: mt._id,
+        createdAt: new Date(mt.createdAt), // Convert number to Date object
+        updatedAt: new Date(mt.updatedAt), // Convert number to Date object
+      });
+    });
+    return map;
+  }, [mediaTypesData]);
   
   // Convert Convex data to MediaItem format
   const mediaItems = useMemo(() => {
@@ -158,6 +182,9 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      getMediaType: (id: string) => mediaTypesMap.get(id),
+    },
   });
 
   // Ref for the scrollable container

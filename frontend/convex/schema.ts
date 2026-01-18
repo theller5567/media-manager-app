@@ -52,4 +52,32 @@ export default defineSchema({
     .searchIndex("search_title", {
       searchField: "title",
     }),
+  mediaTypes: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    color: v.string(),
+    allowedFormats: v.array(v.string()),
+    fields: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        label: v.string(),
+        type: v.union(
+          v.literal("text"),
+          v.literal("number"),
+          v.literal("date"),
+          v.literal("select"),
+          v.literal("boolean"),
+          v.literal("url")
+        ),
+        required: v.boolean(),
+        options: v.optional(v.array(v.string())),
+        validationRegex: v.optional(v.string()),
+        placeholder: v.optional(v.string()),
+      })
+    ),
+    defaultTags: v.array(v.string()),
+  })
+    .index("by_name", ["name"])
 });
+

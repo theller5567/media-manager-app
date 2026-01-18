@@ -161,3 +161,26 @@ function getVideoMetadata(file: File): Promise<{ width: number; height: number; 
     video.src = URL.createObjectURL(file);
   });
 }
+
+/**
+ * Convert File to base64 string for API transmission
+ * Used for sending files to Convex actions (which can't receive File objects directly)
+ */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+      const base64String = (reader.result as string).split(',')[1];
+      if (!base64String) {
+        reject(new Error('Failed to convert file to base64'));
+        return;
+      }
+      resolve(base64String);
+    };
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    reader.readAsDataURL(file);
+  });
+}

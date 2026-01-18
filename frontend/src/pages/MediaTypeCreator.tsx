@@ -1,36 +1,61 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import type { MediaType } from '@/types/mediaType';
-import {
-  getAllMediaTypes,
-  createMediaType,
-  updateMediaType,
-  deleteMediaType,
-  getAllMediaTypeUsageCounts,
-} from '@/data/mockMediaTypes';
-import { getAvailableTags } from '@/lib/filteringUtils';
-import { mockMediaData } from '@/data/mockMediaData';
 import { MediaTypeList } from '@/components/media/MediaTypeList';
 import { MediaTypeForm } from '@/components/media/MediaTypeForm';
 
 const MediaTypeCreator = () => {
-  const [mediaTypes, setMediaTypes] = useState<MediaType[]>([]);
   const [editingMediaType, setEditingMediaType] = useState<MediaType | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
 
-  // Load available tags from mockMediaData
-  const availableTags = useMemo(() => getAvailableTags(mockMediaData), []);
+  // Convex queries
+  const mediaTypesData = useQuery(api.queries.mediaTypes.list);
+  const usageCountsData = useQuery(api.queries.mediaTypes.getAllUsageCounts);
+  const allMediaItems = useQuery(api.queries.media.list);
 
-  // Load MediaTypes and usage counts
-  useEffect(() => {
-    const loadedMediaTypes = getAllMediaTypes();
-    setMediaTypes(loadedMediaTypes);
-    const counts = getAllMediaTypeUsageCounts();
-    setUsageCounts(counts);
-  }, []);
+  // Convex mutations - use useCallback to ensure stable references
+  const createMediaTypeMutation = useMutation(api.mutations.mediaTypes.create);
+  const updateMediaTypeMutation = useMutation(api.mutations.mediaTypes.update);
+  const deleteMediaTypeMutation = useMutation(api.mutations.mediaTypes.deleteMediaType);
+
+  // Convert Convex documents to MediaType format (map _id to id, convert timestamps to Date objects)
+  const mediaTypes: MediaType[] = useMemo(() => {
+    if (!mediaTypesData) return [];
+    return mediaTypesData.map((mt: any) => ({
+      ...mt,
+      id: mt._id,
+      createdAt: new Date(mt.createdAt), // Convert number to Date object
+      updatedAt: new Date(mt.updatedAt), // Convert number to Date object
+    }));
+  }, [mediaTypesData]);
+
+  // Convert usage counts (map Convex IDs to string IDs)
+  const usageCounts: Record<string, number> = useMemo(() => {
+    if (!usageCountsData) return {};
+    const counts: Record<string, number> = {};
+    Object.entries(usageCountsData).forEach(([convexId, count]: [string, unknown]) => {
+      counts[convexId] = typeof count === 'number' ? count : 0;
+    });
+    return counts;
+  }, [usageCountsData]);
+
+  // Load available tags from all media items
+  const availableTags = useMemo(() => {
+    if (!allMediaItems) return [];
+    const allTags = new Set<string>();
+    allMediaItems.forEach((item: any) => {
+      if (Array.isArray(item.tags)) {
+        item.tags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags).sort();
+  }, [allMediaItems]);
 
   const handleCreate = () => {
+    // Explicitly clear editingMediaType to prevent any cached object from leaking
     setEditingMediaType(null);
     setShowForm(true);
   };
@@ -40,45 +65,100 @@ const MediaTypeCreator = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    const success = deleteMediaType(id);
-    if (success) {
-      const updatedMediaTypes = getAllMediaTypes();
-      setMediaTypes(updatedMediaTypes);
-      const counts = getAllMediaTypeUsageCounts();
-      setUsageCounts(counts);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMediaTypeMutation({ id: id as Id<"mediaTypes"> });
+      // Convex will automatically update the queries
+    } catch (error) {
+      console.error('Error deleting MediaType:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete MediaType');
     }
   };
 
-  const handleFormSubmit = (data: Omit<MediaType, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleFormSubmit = async (data: Omit<MediaType, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      if (editingMediaType) {
+      const isEditMode = editingMediaType !== null && editingMediaType !== undefined;
+      
+      if (isEditMode) {
         // Update existing MediaType
-        updateMediaType(editingMediaType.id, data);
-        const updatedMediaTypes = getAllMediaTypes();
-        setMediaTypes(updatedMediaTypes);
+        await updateMediaTypeMutation({
+          id: editingMediaType!.id as Id<"mediaTypes">,
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          allowedFormats: data.allowedFormats,
+          fields: data.fields.map((f) => ({
+            id: f.id,
+            name: f.name,
+            label: f.label,
+            type: f.type,
+            required: f.required,
+            ...(f.options && { options: f.options }),
+            ...(f.validationRegex && { validationRegex: f.validationRegex }),
+            ...(f.placeholder && { placeholder: f.placeholder }),
+          })),
+          defaultTags: data.defaultTags,
+        });
       } else {
-        // Create new MediaType
-        createMediaType(data);
-        const updatedMediaTypes = getAllMediaTypes();
-        setMediaTypes(updatedMediaTypes);
+        // Create new MediaType - use useCallback pattern to ensure fresh mutation call
+        // Extract all values to primitives first to prevent any object references
+        const nameValue = String(data.name);
+        const descriptionValue = data.description ? String(data.description) : undefined;
+        const colorValue = String(data.color);
+        const allowedFormatsValue = Array.isArray(data.allowedFormats) 
+          ? data.allowedFormats.map(f => String(f)) 
+          : [];
+        const fieldsValue = Array.isArray(data.fields)
+          ? data.fields.map((f) => {
+              const fieldObj: any = {
+                id: String(f.id),
+                name: String(f.name),
+                label: String(f.label),
+                type: f.type,
+                required: Boolean(f.required),
+              };
+              if (f.options && Array.isArray(f.options)) {
+                fieldObj.options = f.options.map(o => String(o));
+              }
+              if (f.validationRegex) {
+                fieldObj.validationRegex = String(f.validationRegex);
+              }
+              if (f.placeholder) {
+                fieldObj.placeholder = String(f.placeholder);
+              }
+              return fieldObj;
+            })
+          : [];
+        const defaultTagsValue = Array.isArray(data.defaultTags)
+          ? data.defaultTags.map(t => String(t))
+          : [];
+
+        // Build mutation args object
+        const mutationArgs = {
+          name: nameValue,
+          ...(descriptionValue !== undefined && { description: descriptionValue }),
+          color: colorValue,
+          allowedFormats: allowedFormatsValue,
+          fields: fieldsValue,
+          defaultTags: defaultTagsValue,
+        };
+
+        await createMediaTypeMutation(mutationArgs);
       }
 
-      // Update usage counts
-      const counts = getAllMediaTypeUsageCounts();
-      setUsageCounts(counts);
-
+      // Convex will automatically update the queries
       // Return to list view
       setShowForm(false);
       setEditingMediaType(null);
     } catch (error) {
       console.error('Error saving MediaType:', error);
-      // Error handling could show a toast notification here
+      alert(error instanceof Error ? error.message : 'Failed to save MediaType');
     }
   };
 
   const handleFormCancel = () => {
     setShowForm(false);
+    // Explicitly clear editingMediaType to prevent any cached object from leaking
     setEditingMediaType(null);
   };
 

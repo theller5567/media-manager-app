@@ -6,7 +6,7 @@ import {
   FileText,
   File,
 } from "lucide-react";
-import { getMediaTypeById } from "@/data/mockMediaTypes";
+import type { MediaType as CustomMediaType } from "@/types/mediaType";
 
 export type MediaType = "image" | "video" | "audio" | "document" | "other";
 
@@ -48,30 +48,27 @@ export const getMediaTypeIcon = (mediaType: MediaType): React.ComponentType<{ cl
 };
 
 /**
- * Get media type by customMediaTypeId
- * @param customMediaTypeId - The ID of the custom MediaType (e.g., "1", "2")
- * @returns The MediaType object or undefined if not found
+ * Get media type name from MediaType object
+ * @param mediaType - The MediaType object
+ * @returns The MediaType name or "Standard" if not provided
  */
-export function getCustomMediaTypeById(customMediaTypeId?: string): string | undefined {
-  if(!customMediaTypeId) {
+export function getCustomMediaTypeById(mediaType?: CustomMediaType): string | undefined {
+  if (!mediaType) {
     return undefined;
   }
-  const mediaType = getMediaTypeById(customMediaTypeId);
-  return mediaType?.name || "Standard";
+  return mediaType.name || "Standard";
 }
 
 /**
- * Get media type color from customMediaTypeId
- * @param customMediaTypeId - The ID of the custom MediaType (e.g., "1", "2")
+ * Get media type color from MediaType object
+ * @param mediaType - The MediaType object
  * @returns Hex color string (e.g., "#ff9900") or default cyan-500 if not found
  */
-export function getMediaTypeColor(customMediaTypeId?: string): string {
-  if (!customMediaTypeId) {
+export function getMediaTypeColor(mediaType?: CustomMediaType): string {
+  if (!mediaType) {
     return '#06b6d4'; // cyan-500 default
   }
-  
-  const mediaType = getMediaTypeById(customMediaTypeId);
-  return mediaType?.color || '#06b6d4'; // Fallback to cyan-500 if not found
+  return mediaType.color || '#06b6d4'; // Fallback to cyan-500 if not found
 }
 
 /**

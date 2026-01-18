@@ -1,12 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { FilePreview, CommonFields, AISuggestions, UploadState } from '@/types/upload';
 import type { MediaType } from '@/types/mediaType';
 import { createFilePreview, revokePreviewUrl } from '@/lib/fileUtils';
 import { validateFile } from '@/lib/cloudinary';
 import { analyzeFileWithAI } from '@/lib/aiUtils';
-import { getAllMediaTypes } from '@/data/mockMediaTypes';
 import { normalizeFileExtension } from '@/lib/mediaTypeUtils';
 
 const initialCommonFields: CommonFields = {
@@ -58,6 +57,19 @@ function getFieldValidationError(field: { name: string; label: string; type: str
 }
 
 export function useMediaUpload() {
+  // Get Convex action for Gemini AI analysis
+  // Note: useAction returns undefined if the action is not available (e.g., during initial load)
+  const analyzeMediaWithGemini = useAction(api.actions.analyzeMedia.analyzeMediaWithGemini);
+  
+  // Log when action becomes available
+  useEffect(() => {
+    if (analyzeMediaWithGemini) {
+      console.log('[useMediaUpload] Gemini action is now available');
+    } else {
+      console.warn('[useMediaUpload] Gemini action not yet available');
+    }
+  }, [analyzeMediaWithGemini]);
+
   const [state, setState] = useState<UploadState>({
     step: 0,
     files: [],
@@ -138,7 +150,15 @@ export function useMediaUpload() {
           
           // Process first file for common fields (all files get same common fields)
           const firstFile = currentState.files[0];
-          const suggestions = await analyzeFileWithAI(firstFile.file, currentState.selectedMediaType!);
+          
+          // Pass the Convex action directly to analyzeFileWithAI
+          // analyzeMediaWithGemini may be undefined initially, so pass it conditionally
+          console.log('[useMediaUpload] processAI called, analyzeMediaWithGemini available:', !!analyzeMediaWithGemini);
+          const suggestions = await analyzeFileWithAI(
+            firstFile.file, 
+            currentState.selectedMediaType!,
+            analyzeMediaWithGemini ?? undefined
+          );
 
           // Apply MediaType default tags
           if (currentState.selectedMediaType!.defaultTags && currentState.selectedMediaType!.defaultTags.length > 0) {
@@ -166,7 +186,17 @@ export function useMediaUpload() {
             aiProcessing: false,
             errors: {
               ...current.errors,
-              ai: [error instanceof Error ? error.message : 'AI processing failed'],
+              ai: [
+                error instanceof Error 
+                  ? error.message.includes('API key') 
+                    ? 'AI service configuration error. Please check your API key.'
+                    : error.message.includes('quota') || error.message.includes('rate limit')
+                    ? 'AI service quota exceeded. Please try again later.'
+                    : error.message.includes('too large')
+                    ? 'File is too large for AI analysis. Maximum size is 20MB.'
+                    : `AI processing failed: ${error.message}`
+                  : 'AI processing failed. Please try again.',
+              ],
             },
           }));
         }
@@ -174,7 +204,7 @@ export function useMediaUpload() {
 
       return { ...prev, aiProcessing: true };
     });
-  }, []);
+  }, [analyzeMediaWithGemini]);
 
   const setMediaType = useCallback((mediaType: MediaType | null) => {
     setState((prev) => {
@@ -470,7 +500,7 @@ export function useMediaUpload() {
           const format = filePreview.file.name.split('.').pop() || 'unknown';
           
           // Create media item in Convex
-          const mediaItem = await createMedia({
+          const mediaDoc = await createMedia({
             cloudinaryPublicId: result.publicId,
             cloudinarySecureUrl: result.secureUrl,
             filename: filePreview.file.name,
@@ -494,6 +524,28 @@ export function useMediaUpload() {
             dateModified: Date.now(),
             isMockData: false,
           });
+
+          // Convert Convex document to MediaItem format
+          if (!mediaDoc) {
+            throw new Error('Failed to create media item: document not returned from database');
+          }
+
+          const mediaItem = {
+            id: String(mediaDoc._id), // Convert Convex ID to string
+            filename: mediaDoc.filename,
+            thumbnail: mediaDoc.thumbnail,
+            mediaType: mediaDoc.mediaType,
+            customMediaTypeId: mediaDoc.customMediaTypeId,
+            title: mediaDoc.title,
+            description: mediaDoc.description,
+            altText: mediaDoc.altText,
+            fileSize: mediaDoc.fileSize,
+            tags: mediaDoc.tags,
+            dateModified: new Date(mediaDoc.dateModified),
+            relatedFiles: mediaDoc.relatedFiles,
+            customMetadata: mediaDoc.customMetadata,
+            aiGenerated: mediaDoc.aiGenerated,
+          };
 
           uploadedItems.push(mediaItem);
         } catch (error) {
@@ -541,16 +593,25 @@ export function useMediaUpload() {
     });
   }, []);
 
+  // Fetch all MediaTypes from Convex
+  const allMediaTypesData = useQuery(api.queries.mediaTypes.list);
+  
   const getFilteredMediaTypes = useCallback((): MediaType[] => {
-    if (state.files.length === 0) return [];
+    if (state.files.length === 0 || !allMediaTypesData) return [];
 
     const fileExtensions = state.files.map((f) => normalizeFileExtension(f.extension));
-    const allMediaTypes = getAllMediaTypes();
+    // Convert Convex documents to MediaType format
+    const allMediaTypes: MediaType[] = allMediaTypesData.map((mt) => ({
+      ...mt,
+      id: mt._id,
+      createdAt: new Date(mt.createdAt), // Convert number to Date object
+      updatedAt: new Date(mt.updatedAt), // Convert number to Date object
+    }));
 
     return allMediaTypes.filter((mt) => {
       return fileExtensions.some((ext) => mt.allowedFormats.includes(ext));
     });
-  }, [state.files]);
+  }, [state.files, allMediaTypesData]);
 
   const clearAISuggestions = useCallback(() => {
     setState((prev) => ({
