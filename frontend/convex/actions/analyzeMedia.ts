@@ -134,19 +134,35 @@ Be specific and descriptive. For images, describe what you see. For videos, desc
       // Gemini may wrap JSON in markdown code blocks or add explanatory text
       let jsonText = text.trim();
       
-      // Remove markdown code blocks if present
-      const jsonMatch = jsonText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+      // Remove markdown code blocks if present (handle both ```json and ```)
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
-        jsonText = jsonMatch[1];
+        jsonText = jsonMatch[1].trim();
       } else {
-        // Try to extract JSON object from text
-        const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/);
-        if (jsonObjectMatch) {
-          jsonText = jsonObjectMatch[0];
+        // Try to extract JSON object from text (find first { and last })
+        const firstBrace = jsonText.indexOf('{');
+        const lastBrace = jsonText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonText = jsonText.substring(firstBrace, lastBrace + 1);
         }
       }
 
-      const parsed = JSON.parse(jsonText);
+      // Clean up any remaining markdown or extra text
+      jsonText = jsonText.trim();
+      
+      // If still wrapped in code blocks, try one more time
+      if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (parseError) {
+        // If parsing fails, log the text for debugging
+        console.error('Failed to parse Gemini JSON response. Text:', jsonText);
+        throw new Error(`Failed to parse Gemini response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
 
       // Validate and structure response
       const suggestions: {

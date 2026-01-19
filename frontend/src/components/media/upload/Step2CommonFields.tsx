@@ -13,6 +13,7 @@ interface Step2CommonFieldsProps {
   onFieldsChange: (fields: Partial<CommonFields>) => void;
   onClearAISuggestions?: () => void;
   errors?: string[];
+  validationAttempted?: boolean;
 }
 
 export function Step2CommonFields({
@@ -22,6 +23,7 @@ export function Step2CommonFields({
   onFieldsChange,
   onClearAISuggestions,
   errors = [],
+  validationAttempted = false,
 }: Step2CommonFieldsProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>(commonFields.tags);
   const [tagInput, setTagInput] = useState('');
@@ -132,11 +134,17 @@ export function Step2CommonFields({
           <input
             type="text"
             value={commonFields.title}
-            onChange={(e) => onFieldsChange({ title: e.target.value })}
+            onChange={(e) => {
+              onFieldsChange({ title: e.target.value });
+              // Clear error when user starts typing
+              if (errors.includes('title') && e.target.value.trim()) {
+                // Error will be cleared on next validation attempt
+              }
+            }}
             placeholder="Enter title"
             className={twMerge(
               'w-full px-3 py-2 bg-slate-800 border rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500',
-              errors.includes('title') ? 'border-red-500' : 'border-slate-700'
+              validationAttempted && errors.includes('title') ? 'border-red-500' : 'border-slate-700'
             )}
             required
           />
@@ -157,7 +165,7 @@ export function Step2CommonFields({
             </div>
           )}
         </div>
-        {errors.includes('title') && (
+        {validationAttempted && errors.includes('title') && (
           <p className="text-xs text-red-400">Title is required</p>
         )}
       </div>
@@ -170,12 +178,15 @@ export function Step2CommonFields({
         <div className="relative">
           <textarea
             value={commonFields.description}
-            onChange={(e) => onFieldsChange({ description: e.target.value })}
+            onChange={(e) => {
+              onFieldsChange({ description: e.target.value });
+              // Clear error when user starts typing
+            }}
             placeholder="Enter description"
             rows={4}
             className={twMerge(
               'w-full px-3 py-2 bg-slate-800 border rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none',
-              errors.includes('description') ? 'border-red-500' : 'border-slate-700'
+              validationAttempted && errors.includes('description') ? 'border-red-500' : 'border-slate-700'
             )}
             required
           />
@@ -210,11 +221,14 @@ export function Step2CommonFields({
           <input
             type="text"
             value={commonFields.altText}
-            onChange={(e) => onFieldsChange({ altText: e.target.value })}
+            onChange={(e) => {
+              onFieldsChange({ altText: e.target.value });
+              // Clear error when user starts typing
+            }}
             placeholder="Enter alt text for accessibility"
             className={twMerge(
               'w-full px-3 py-2 bg-slate-800 border rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500',
-              errors.includes('altText') ? 'border-red-500' : 'border-slate-700'
+              validationAttempted && errors.includes('altText') ? 'border-red-500' : 'border-slate-700'
             )}
             required
           />
@@ -235,7 +249,7 @@ export function Step2CommonFields({
             </div>
           )}
         </div>
-        {errors.includes('altText') && (
+        {validationAttempted && errors.includes('altText') && (
           <p className="text-xs text-red-400">Alt text is required</p>
         )}
       </div>
@@ -261,7 +275,7 @@ export function Step2CommonFields({
             placeholder="Type to search or add tags"
             className={twMerge(
               'w-full px-3 py-2 bg-slate-800 border rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500',
-              errors.includes('tags') ? 'border-red-500' : 'border-slate-700'
+              validationAttempted && errors.includes('tags') ? 'border-red-500' : 'border-slate-700'
             )}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && tagInput.trim()) {
@@ -330,7 +344,7 @@ export function Step2CommonFields({
           </div>
         )}
         
-        {errors.includes('tags') && (
+        {validationAttempted && errors.includes('tags') && (
           <p className="text-xs text-red-400">At least one tag is required</p>
         )}
       </div>

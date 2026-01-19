@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Filter, X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
-import { useUIStore, type SortField, type SortDirection } from '@/store/uiStore';
+import { useUIStore, type SortField } from '@/store/uiStore';
 import type { MediaType } from '@/lib/mediaUtils';
 import { getSortOptions } from '@/lib/sortingUtils';
 import { cn } from '@/lib/utils';
@@ -49,11 +49,12 @@ const MediaFilters: React.FC<MediaFiltersProps> = ({ availableTags }) => {
   }, [isOpen]);
 
   // Calculate active filter count
+  // Check if sort differs from default (dateModified desc)
+  const isDefaultSort = sortBy === 'dateModified' && sortDirection === 'desc' && secondarySortBy === null;
   const activeFilterCount =
     (selectedMediaTypes.length > 0 ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0) +
-    (sortBy !== 'filename' || sortDirection !== 'asc' ? 1 : 0) +
-    (secondarySortBy !== null ? 1 : 0);
+    (!isDefaultSort ? 1 : 0);
 
   const handleSortChange = (field: SortField) => {
     // Toggle direction if same field, otherwise set to ascending
@@ -120,7 +121,7 @@ const MediaFilters: React.FC<MediaFiltersProps> = ({ availableTags }) => {
                   <ArrowUpDown className="h-4 w-4" />
                   Sort
                 </h3>
-                {(sortBy !== 'filename' || sortDirection !== 'asc' || secondarySortBy !== null) && (
+                {(sortBy !== 'dateModified' || sortDirection !== 'desc' || secondarySortBy !== null) && (
                   <button
                     onClick={clearSorting}
                     className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1"

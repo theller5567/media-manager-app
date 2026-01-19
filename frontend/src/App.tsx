@@ -3,19 +3,13 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import MediaLibrary from './pages/MediaLibrary'
 import MediaTypeCreator from './pages/MediaTypeCreator'
 import MediaDetail from './pages/MediaDetail'
+import TagManagement from './pages/TagManagement'
 
 // Placeholder Page Components
 const Dashboard = () => (
   <div>
     <h2 className="text-2xl font-bold text-slate-900">Dashboard Overview</h2>
     <p className="mt-2 text-slate-600">Welcome back to your media manager.</p>
-  </div>
-)
-
-const TagManagement = () => (
-  <div>
-    <h2 className="text-2xl font-bold text-slate-900">Tag Management</h2>
-    <p className="mt-2 text-slate-600">Manage your hierarchical tags and categories here.</p>
   </div>
 )
 
@@ -40,7 +34,7 @@ function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/library" element={<MediaLibrary />} />
-          <Route path="/tags" element={<TagManagement />} />
+          <Route path="/tag-management" element={<TagManagement />} />
           <Route path="/media-type-creator" element={<MediaTypeCreator />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/settings" element={<Settings />} />

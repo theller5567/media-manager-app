@@ -5,7 +5,7 @@ import { twMerge } from 'tailwind-merge'
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Media Library', href: '/library', icon: Library },
-  { label: 'Tag Management', href: '/tags', icon: Tag },
+  { label: 'Tag Management', href: '/tag-management', icon: Tag },
   { label: 'Media Type Creator', href: '/media-type-creator', icon: Plus },
   { label: 'Profile', href: '/profile', icon: User },
   { label: 'Settings', href: '/settings', icon: Settings },

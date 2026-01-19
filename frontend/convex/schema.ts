@@ -78,6 +78,11 @@ export default defineSchema({
     ),
     defaultTags: v.array(v.string()),
   })
-    .index("by_name", ["name"])
+    .index("by_name", ["name"]),
+  mediaTags: defineTable({
+    name: v.string(),
+    createdBy: v.optional(v.id("users")),
+  })
+    .index("by_name", ["name"]),
 });
 

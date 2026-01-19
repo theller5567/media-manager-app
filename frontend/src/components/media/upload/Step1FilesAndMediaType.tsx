@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, X, FileImage, FileVideo, FileText, FileAudio, File, Sparkles, Loader2 } from 'lucide-react';
+import { Upload, X, FileImage, FileVideo, FileText, FileAudio, File, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import type { FilePreview } from '@/types/upload';
 import type { MediaType } from '@/types/mediaType';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ interface Step1FilesAndMediaTypeProps {
   onMediaTypeSelect: (mediaType: MediaType | null) => void;
   onUseAIToggle: (useAI: boolean) => void;
   errors: Record<string, string[]>;
+  filesTooLargeForAI?: boolean;
+  aiDisabledReason?: string | null;
+  currentAIFileName?: string;
 }
 
 export function Step1FilesAndMediaType({
@@ -29,6 +32,9 @@ export function Step1FilesAndMediaType({
   onMediaTypeSelect,
   onUseAIToggle,
   errors,
+  filesTooLargeForAI = false,
+  aiDisabledReason = null,
+  currentAIFileName,
 }: Step1FilesAndMediaTypeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +98,8 @@ export function Step1FilesAndMediaType({
 
   return (
     <div className="space-y-6">
+      
+
       {/* Drag and Drop Zone */}
       <div
         onDragOver={handleDragOver}
@@ -227,36 +235,75 @@ export function Step1FilesAndMediaType({
 
       {/* AI Choice Toggle */}
       {selectedMediaType && (
-        <div className="flex items-center justify-between p-4 rounded-lg border border-slate-700 bg-slate-800/50">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-cyan-500" />
-            <div>
-              <p className="text-sm font-medium text-white">Use AI to generate metadata?</p>
-              <p className="text-xs text-slate-400">
-                AI will analyze your files and suggest titles, descriptions, alt text, and tags
+        <div className={`flex flex-col gap-3 p-4 rounded-lg border ${filesTooLargeForAI ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700 bg-slate-800/50'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className={`h-5 w-5 ${filesTooLargeForAI ? 'text-amber-500' : 'text-cyan-500'}`} />
+              <div>
+                <p className={`text-sm font-medium ${filesTooLargeForAI ? 'text-amber-400' : 'text-white'}`}>
+                  Use AI to generate metadata?
+                </p>
+                <p className={`text-xs ${filesTooLargeForAI ? 'text-amber-300/80' : 'text-slate-400'}`}>
+                  {filesTooLargeForAI 
+                    ? aiDisabledReason || 'Files are too large for AI analysis'
+                    : 'AI will analyze your files and suggest titles, descriptions, alt text, and tags'
+                  }
+                </p>
+              </div>
+            </div>
+            <label className={`relative inline-flex items-center ${filesTooLargeForAI ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                checked={useAI && !filesTooLargeForAI}
+                onChange={(e) => !filesTooLargeForAI && onUseAIToggle(e.target.checked)}
+                className="sr-only peer"
+                disabled={aiProcessing || filesTooLargeForAI}
+              />
+              <div className={`w-11 h-6 ${filesTooLargeForAI ? 'bg-slate-600' : 'bg-slate-700'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${filesTooLargeForAI ? '' : 'peer-checked:bg-cyan-500'}`}></div>
+            </label>
+          </div>
+          {filesTooLargeForAI && (
+            <div className="flex items-start gap-2 text-xs text-amber-300/90 bg-amber-500/10 p-2 rounded border border-amber-500/30">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                Files larger than 3.5MB cannot be analyzed with AI due to technical limitations. 
+                Basic metadata will be generated from filenames instead.
               </p>
             </div>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={useAI}
-              onChange={(e) => onUseAIToggle(e.target.checked)}
-              className="sr-only peer"
-              disabled={aiProcessing}
-            />
-            <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
-          </label>
+          )}
         </div>
       )}
 
       {/* AI Processing Indicator */}
       {aiProcessing && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/50">
-          <Loader2 className="h-4 w-4 animate-spin text-cyan-500" />
-          <p className="text-sm text-cyan-400">Analyzing files with AI...</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/50">
+          <Loader2 className="h-5 w-5 animate-spin text-cyan-500 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-cyan-400 mb-1">Analyzing files with AI...</p>
+            {currentAIFileName && (
+              <p className="text-xs text-cyan-300/80">Processing: {currentAIFileName}</p>
+            )}
+            <p className="text-xs text-slate-400 mt-1">This may take a few moments. Please wait...</p>
+          </div>
         </div>
       )}
+
+      {/* File Upload Limits Information */}
+      <div className="mb-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+        <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+          <File className="h-4 w-4" />
+          File Upload Limits
+        </h4>
+        <ul className="text-xs text-slate-400 space-y-1 mb-2">
+          <li>• Images: Up to 20MB</li>
+          <li>• Videos: Up to 500MB</li>
+          <li>• Other files: Up to 100MB</li>
+          <li>• AI analysis: Files up to 3.5MB</li>
+        </ul>
+        <p className="text-xs text-slate-500 mt-2">
+          Supported formats: Images (JPEG, PNG, GIF, WebP), Videos (MP4, MOV, AVI), Audio (MP3, WAV), Documents (PDF, DOC, DOCX)
+        </p>
+      </div>
     </div>
   );
 }

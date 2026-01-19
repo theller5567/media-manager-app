@@ -60,8 +60,10 @@ After setting up the API key:
 - Ensure you're using a valid Gemini API key from Google AI Studio
 
 **Error: "File is too large for AI analysis"**
-- Gemini has a 20MB limit for images
-- Consider compressing large images before upload
+- **Convex Action Limit**: Files larger than ~3.75MB cannot be analyzed due to Convex's 5MB argument size limit (base64 encoding increases file size by ~33%)
+- **Gemini API Limit**: Gemini has a 20MB limit for images/videos
+- **Solution**: Files larger than ~3.75MB will automatically use fallback metadata generation instead of AI analysis
+- Consider compressing large images before upload if you want AI analysis
 
 **AI suggestions not appearing**
 - Check browser console for errors

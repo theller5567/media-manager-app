@@ -26,9 +26,42 @@ const columns: ColumnDef<MediaItem>[] = [
     cell: ({ row }) => {
       const item = row.original;
       const Icon = getMediaTypeIcon(item.mediaType);
+      
+      // Helper function to check if URL is actually an image
+      const isImageUrl = (url: string): boolean => {
+        if (!url) return false;
+        const lowerUrl = url.toLowerCase();
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.bmp'];
+        const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'];
+        const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.flv'];
+        const documentExtensions = ['.pdf', '.doc', '.docx', '.txt'];
+        
+        // Known image hosting services (trust these URLs)
+        const imageHostingServices = ['picsum.photos', 'unsplash.com', 'pexels.com', 'imgur.com', 'cloudinary.com'];
+        if (imageHostingServices.some(service => lowerUrl.includes(service))) return true;
+        
+        // Check if URL contains audio/video/document extensions - definitely not an image
+        if (audioExtensions.some(ext => lowerUrl.includes(ext))) return false;
+        if (videoExtensions.some(ext => lowerUrl.includes(ext))) return false;
+        if (documentExtensions.some(ext => lowerUrl.includes(ext))) return false;
+        
+        // Check if URL contains image extensions - definitely an image
+        if (imageExtensions.some(ext => lowerUrl.includes(ext))) return true;
+        
+        // If mediaType is 'image' and URL doesn't have any conflicting extensions, trust it
+        // This handles URLs without extensions (like picsum.photos) when mediaType is correct
+        if (item.mediaType === 'image') return true;
+        
+        // Default: don't trust it if we can't determine
+        return false;
+      };
+      
+      // Only show image if mediaType is 'image' AND thumbnail is actually an image URL
+      const shouldShowImage = item.mediaType === 'image' && item.thumbnail && isImageUrl(item.thumbnail);
+      
       return (
         <div className="w-12 h-12 rounded border overflow-hidden bg-gray-100 flex items-center justify-center">
-          {item.thumbnail ? (
+          {shouldShowImage ? (
             <img
               src={item.thumbnail}
               alt={item.filename}

@@ -4,8 +4,8 @@ import { api } from '../../convex/_generated/api';
 import type { FilePreview, CommonFields, AISuggestions, UploadState } from '@/types/upload';
 import type { MediaType } from '@/types/mediaType';
 import { createFilePreview, revokePreviewUrl } from '@/lib/fileUtils';
-import { validateFile } from '@/lib/cloudinary';
-import { analyzeFileWithAI } from '@/lib/aiUtils';
+import { validateFile, generateVideoThumbnailUrl } from '@/lib/cloudinary';
+import { analyzeFileWithAI, isFileTooLargeForAI, MAX_FILE_SIZE_FOR_AI } from '@/lib/aiUtils';
 import { normalizeFileExtension } from '@/lib/mediaTypeUtils';
 
 const initialCommonFields: CommonFields = {
@@ -63,11 +63,10 @@ export function useMediaUpload() {
   
   // Log when action becomes available
   useEffect(() => {
-    if (analyzeMediaWithGemini) {
-      console.log('[useMediaUpload] Gemini action is now available');
-    } else {
-      console.warn('[useMediaUpload] Gemini action not yet available');
-    }
+    // useAction returns a function, so it's always defined (never undefined)
+    // We can't check if it's available until we try to call it
+    // Just log that we have the action reference
+    console.log('[useMediaUpload] Gemini action reference available');
   }, [analyzeMediaWithGemini]);
 
   const [state, setState] = useState<UploadState>({
@@ -86,7 +85,13 @@ export function useMediaUpload() {
     uploading: false,
     uploadProgress: {},
   });
-
+  
+  // Track which file is currently being analyzed by AI
+  const [currentAIFileName, setCurrentAIFileName] = useState<string | undefined>(undefined);
+  
+  // Track if real AI processing is in progress to prevent multiple calls
+  const aiProcessingRef = useRef(false);
+  
   const addFiles = useCallback(async (files: File[]) => {
     const newPreviews: FilePreview[] = [];
     const errors: Record<string, string[]> = {};
@@ -137,8 +142,23 @@ export function useMediaUpload() {
   }, []);
 
   const processAI = useCallback(async () => {
+    // Use ref to prevent multiple simultaneous calls - check and set atomically
+    // This must be synchronous to prevent race conditions
+    if (aiProcessingRef.current) {
+      console.log('[useMediaUpload] processAI already in progress, skipping duplicate call', new Error().stack);
+      return;
+    }
+    
+    // Immediately set ref to prevent other calls (atomic operation)
+    // We'll reset it if conditions aren't met
+    aiProcessingRef.current = true;
+    console.log('[useMediaUpload] processAI starting, ref set to true');
+    
     setState((prev) => {
-      if (!prev.useAI || !prev.selectedMediaType || prev.files.length === 0) {
+      // Check conditions inside setState to get latest state
+      if (!prev.useAI || !prev.selectedMediaType || prev.files.length === 0 || prev.aiProcessing) {
+        // Reset ref if conditions aren't met
+        aiProcessingRef.current = false;
         return prev;
       }
 
@@ -151,6 +171,9 @@ export function useMediaUpload() {
           // Process first file for common fields (all files get same common fields)
           const firstFile = currentState.files[0];
           
+          // Set current file being analyzed
+          setCurrentAIFileName(firstFile.file.name);
+          
           // Pass the Convex action directly to analyzeFileWithAI
           // analyzeMediaWithGemini may be undefined initially, so pass it conditionally
           console.log('[useMediaUpload] processAI called, analyzeMediaWithGemini available:', !!analyzeMediaWithGemini);
@@ -159,6 +182,9 @@ export function useMediaUpload() {
             currentState.selectedMediaType!,
             analyzeMediaWithGemini ?? undefined
           );
+          
+          // Clear current file name after analysis completes
+          setCurrentAIFileName(undefined);
 
           // Apply MediaType default tags
           if (currentState.selectedMediaType!.defaultTags && currentState.selectedMediaType!.defaultTags.length > 0) {
@@ -169,17 +195,37 @@ export function useMediaUpload() {
             suggestions.tags = [...new Set(suggestions.tags)]; // Remove duplicates
           }
 
-          setState((latest) => ({
-            ...latest,
-            aiProcessing: false,
-            aiSuggestions: suggestions,
-            commonFields: {
-              title: suggestions.title || latest.commonFields.title,
-              description: suggestions.description || latest.commonFields.description,
-              altText: suggestions.altText || latest.commonFields.altText,
-              tags: suggestions.tags || latest.commonFields.tags,
-            },
-          }));
+          setState((latest) => {
+            // Only update fields if they have actual values from AI
+            // Use nullish coalescing to distinguish between empty string and undefined/null
+            const newCommonFields = { ...latest.commonFields };
+            
+            if (suggestions.title !== undefined && suggestions.title !== null && suggestions.title !== '') {
+              newCommonFields.title = suggestions.title;
+            }
+            if (suggestions.description !== undefined && suggestions.description !== null && suggestions.description !== '') {
+              newCommonFields.description = suggestions.description;
+            }
+            if (suggestions.altText !== undefined && suggestions.altText !== null && suggestions.altText !== '') {
+              newCommonFields.altText = suggestions.altText;
+            }
+            if (suggestions.tags !== undefined && suggestions.tags !== null && suggestions.tags.length > 0) {
+              newCommonFields.tags = [...suggestions.tags];
+            }
+            
+            console.log('[useMediaUpload] Updating commonFields with AI suggestions:', {
+              before: latest.commonFields,
+              suggestions,
+              after: newCommonFields,
+            });
+            
+            return {
+              ...latest,
+              aiProcessing: false,
+              aiSuggestions: suggestions,
+              commonFields: newCommonFields,
+            };
+          });
         } catch (error) {
           setState((current) => ({
             ...current,
@@ -192,8 +238,8 @@ export function useMediaUpload() {
                     ? 'AI service configuration error. Please check your API key.'
                     : error.message.includes('quota') || error.message.includes('rate limit')
                     ? 'AI service quota exceeded. Please try again later.'
-                    : error.message.includes('too large')
-                    ? 'File is too large for AI analysis. Maximum size is 20MB.'
+                    : error.message.includes('too large') || error.message.includes('arguments size is too large') || error.message.includes('5 MiB limit')
+                    ? 'File is too large for AI analysis. Files larger than ~3.75MB cannot be analyzed due to technical limits. Basic metadata will be generated instead.'
                     : `AI processing failed: ${error.message}`
                   : 'AI processing failed. Please try again.',
               ],
@@ -211,8 +257,14 @@ export function useMediaUpload() {
       const newState = { ...prev, selectedMediaType: mediaType };
       
       // If AI is enabled and MediaType is selected, trigger AI processing
-      if (prev.useAI && mediaType) {
-        setTimeout(() => processAI(), 0);
+      // Only trigger if not already processing to prevent multiple calls
+      if (prev.useAI && mediaType && !prev.aiProcessing && !aiProcessingRef.current) {
+        // Check ref again inside setTimeout to prevent race conditions
+        setTimeout(() => {
+          if (!aiProcessingRef.current) {
+            processAI();
+          }
+        }, 0);
       }
       
       return newState;
@@ -224,8 +276,14 @@ export function useMediaUpload() {
       const newState = { ...prev, useAI };
       
       // If enabling AI and MediaType is selected, trigger AI processing
-      if (useAI && prev.selectedMediaType) {
-        setTimeout(() => processAI(), 0);
+      // Only trigger if not already processing to prevent multiple calls
+      if (useAI && prev.selectedMediaType && !prev.aiProcessing && !aiProcessingRef.current) {
+        // Check ref again inside setTimeout to prevent race conditions
+        setTimeout(() => {
+          if (!aiProcessingRef.current) {
+            processAI();
+          }
+        }, 0);
       }
       
       return newState;
@@ -499,12 +557,46 @@ export function useMediaUpload() {
           // Extract format from filename
           const format = filePreview.file.name.split('.').pop() || 'unknown';
           
+          // Generate thumbnail URL from Cloudinary (not blob URL)
+          // Blob URLs are temporary and don't work after navigation
+          // Use secureUrl directly for now - Cloudinary URLs work reliably
+          // TODO: Optimize with thumbnail transformations once we verify publicId format
+          let thumbnailUrl = '';
+          if (filePreview.type === 'image') {
+            // For images, use the secureUrl directly (Cloudinary serves optimized images)
+            // Alternatively, we could use generateThumbnailUrl but secureUrl is more reliable
+            thumbnailUrl = result.secureUrl;
+          } else if (filePreview.type === 'video') {
+            // For videos, try to generate thumbnail from video frame
+            // Cloudinary video URLs can have .jpg appended for thumbnails
+            try {
+              thumbnailUrl = generateVideoThumbnailUrl(result.publicId, { width: 300, height: 300, crop: 'fill' });
+            } catch (error) {
+              // Fallback to secureUrl if thumbnail generation fails
+              thumbnailUrl = result.secureUrl;
+            }
+          } else {
+            // For other types, use empty string (will show icon instead)
+            thumbnailUrl = '';
+          }
+          
+          // Revoke the blob URL since we're using Cloudinary URL instead
+          if (filePreview.preview && filePreview.preview.startsWith('blob:')) {
+            revokePreviewUrl(filePreview.preview);
+          }
+          
+          // Only set thumbnail for image files, or if we have a valid thumbnail URL
+          // For audio/video/document files, don't use the file URL as thumbnail
+          const finalThumbnail = filePreview.type === 'image' 
+            ? (thumbnailUrl || result.secureUrl)
+            : (thumbnailUrl || ''); // Empty string for non-image files without thumbnails
+          
           // Create media item in Convex
           const mediaDoc = await createMedia({
             cloudinaryPublicId: result.publicId,
             cloudinarySecureUrl: result.secureUrl,
             filename: filePreview.file.name,
-            thumbnail: filePreview.preview || result.secureUrl,
+            thumbnail: finalThumbnail,
             mediaType: filePreview.type as any,
             customMediaTypeId: currentState!.selectedMediaType?.id,
             title: currentState!.files.length > 1 
@@ -591,6 +683,8 @@ export function useMediaUpload() {
         uploadProgress: {},
       };
     });
+    setCurrentAIFileName(undefined);
+    aiProcessingRef.current = false; // Reset processing flag
   }, []);
 
   // Fetch all MediaTypes from Convex
@@ -620,6 +714,12 @@ export function useMediaUpload() {
     }));
   }, []);
 
+  // Check if any files are too large for AI analysis
+  const filesTooLargeForAI = state.files.some(file => isFileTooLargeForAI(file.file));
+  const aiDisabledReason = filesTooLargeForAI 
+    ? `One or more files exceed ${(MAX_FILE_SIZE_FOR_AI / 1024 / 1024).toFixed(1)}MB and cannot be analyzed with AI due to technical limits. Basic metadata will be generated instead.`
+    : null;
+
   return {
     ...state,
     addFiles,
@@ -639,5 +739,8 @@ export function useMediaUpload() {
     reset,
     getFilteredMediaTypes,
     clearAISuggestions,
+    filesTooLargeForAI,
+    aiDisabledReason,
+    currentAIFileName,
   };
 }

@@ -7,6 +7,7 @@ import LazyImage from "@/components/ui/LazyImage";
 import { formatFileSize } from "@/lib/mediaUtils";
 import { useState } from "react";
 import MediaEditDialog from "@/components/media/MediaEditDialog";
+import ReactPlayer from 'react-player'
 
 const MediaDetail = () => {
   const { mediaId } = useParams<{ mediaId: string }>();
@@ -24,6 +25,7 @@ const MediaDetail = () => {
     id: mediaDoc._id,
     filename: mediaDoc.filename,
     thumbnail: mediaDoc.thumbnail,
+    cloudinarySecureUrl: mediaDoc.cloudinarySecureUrl,
     mediaType: mediaDoc.mediaType,
     customMediaTypeId: mediaDoc.customMediaTypeId,
     title: mediaDoc.title,
@@ -97,12 +99,37 @@ const MediaDetail = () => {
             </button>
         </div>
           <div>
+            {media.mediaType === 'image' ? (
             <LazyImage
               src={media.thumbnail}
               alt={media.altText || media.title}
               mediaType={media.mediaType}
               className="w-full h-auto rounded"
             />
+            ) : media.mediaType === 'video' || media.mediaType === 'audio' ? (
+              <div className="w-full bg-slate-900 rounded overflow-hidden" style={{ maxHeight: '800px' }}>
+                <div 
+                  className="relative w-full" 
+                  style={{ 
+                    paddingTop: media.width && media.height 
+                      ? `${(media.height / media.width) * 100}%`
+                      : '56.25%',
+                    maxHeight: '800px'
+                  }}
+                >
+                  <div className="absolute inset-0" style={{ maxHeight: '800px' }}>
+                    
+                    <ReactPlayer 
+                      src={media.cloudinarySecureUrl} 
+                      width="100%" 
+                      height="100%"
+                      className="rounded"
+                      controls 
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null }
           </div>
         </div>
 

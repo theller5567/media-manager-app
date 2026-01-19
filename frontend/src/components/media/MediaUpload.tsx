@@ -66,6 +66,7 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [canProceed, setCanProceed] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [validationAttempted, setValidationAttempted] = useState<Set<number>>(new Set());
 
   // Track perFileFields changes using a stringified key
   const perFileFieldsKey = JSON.stringify(uploadState.perFileFields);
@@ -100,6 +101,7 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
     uploadState.selectedMediaType?.id,
     perFileFieldsKey, // Use stringified key to detect deep changes
     uploadState.validateStep,
+    uploadState.aiProcessing, // Include AI processing state in dependencies
   ]);
 
   // Reset upload state when dialog closes
@@ -110,6 +112,7 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
       setUploadedFiles([]);
       setCanProceed(false);
       setCompletedSteps(new Set());
+      setValidationAttempted(new Set());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -124,6 +127,9 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
   };
 
   const handleNext = () => {
+    // Track that validation was attempted for this step
+    setValidationAttempted(prev => new Set(prev).add(uploadState.step));
+    
     // Validate with error updates enabled (we're in an event handler, so setState is safe)
     const isValid = uploadState.validateStep(uploadState.step, true);
     if (isValid) {
@@ -203,16 +209,21 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
             onFileRemove={uploadState.removeFile}
             onMediaTypeSelect={uploadState.setMediaType}
             onUseAIToggle={uploadState.setUseAI}
-            errors={uploadState.errors}
+            errors={(uploadState.errors?.files && typeof uploadState.errors.files === 'object' && !Array.isArray(uploadState.errors.files) && 'files' in uploadState.errors) ? (uploadState.errors.files as Record<string, string[]>) : {}}
+            filesTooLargeForAI={uploadState.filesTooLargeForAI}
+            aiDisabledReason={uploadState.aiDisabledReason}
+            currentAIFileName={uploadState.currentAIFileName}
           />
         );
       case 1:
-        // Validate Step 2 fields
+        // Validate Step 2 fields - only show errors if validation was attempted
         const step2Errors: string[] = [];
-        if (!uploadState.commonFields.title.trim()) step2Errors.push('title');
-        if (!uploadState.commonFields.description.trim()) step2Errors.push('description');
-        if (!uploadState.commonFields.altText.trim()) step2Errors.push('altText');
-        if (uploadState.commonFields.tags.length === 0) step2Errors.push('tags');
+        if (validationAttempted.has(1)) {
+          if (!uploadState.commonFields.title.trim()) step2Errors.push('title');
+          if (!uploadState.commonFields.description.trim()) step2Errors.push('description');
+          if (!uploadState.commonFields.altText.trim()) step2Errors.push('altText');
+          if (uploadState.commonFields.tags.length === 0) step2Errors.push('tags');
+        }
         
         return (
           <Step2CommonFields
@@ -222,6 +233,7 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
             onFieldsChange={uploadState.setCommonFields}
             onClearAISuggestions={uploadState.clearAISuggestions}
             errors={step2Errors}
+            validationAttempted={validationAttempted.has(1)}
           />
         );
       case 2:
@@ -335,13 +347,14 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
                     <button
                       type="button"
                       onClick={handleNext}
-                      disabled={!canProceed}
+                      disabled={!canProceed || uploadState.aiProcessing}
                       className={cn(
                         'flex items-center gap-2 px-6 py-2 rounded font-medium transition-colors',
-                        !canProceed
+                        !canProceed || uploadState.aiProcessing
                           ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                           : 'bg-cyan-500 text-white hover:bg-cyan-600'
                       )}
+                      title={uploadState.aiProcessing ? 'Please wait for AI analysis to complete' : undefined}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

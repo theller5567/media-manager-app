@@ -3,6 +3,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer components {
+  .media-card-image-grid {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .media-card-image-grid:hover .media-card-image-grid-overlay {
+    bottom: 0;
+  }
+
+  .media-card-image-grid-overlay {
+    position: absolute;
+    bottom: -100%;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+    color: white;
+    transition: bottom 0.3s ease-in-out;
+    z-index: 10;
+  }
+}
+
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

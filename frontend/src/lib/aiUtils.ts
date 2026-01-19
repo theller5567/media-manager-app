@@ -3,6 +3,20 @@ import type { MediaType } from '@/types/mediaType';
 import { fileToBase64 } from './fileUtils';
 
 /**
+ * Maximum file size for AI analysis (Convex action argument limit)
+ * Base64 encoding increases size by ~33%, so limit original file to ~3.5MB
+ * to safely stay under Convex's 5MB argument limit
+ */
+export const MAX_FILE_SIZE_FOR_AI = 3.5 * 1024 * 1024; // ~3.5MB
+
+/**
+ * Check if a file is too large for AI analysis
+ */
+export function isFileTooLargeForAI(file: File): boolean {
+  return file.size > MAX_FILE_SIZE_FOR_AI;
+}
+
+/**
  * Analyze file with AI and generate suggestions using Google Gemini
  * 
  * This function converts the file to base64 and calls the Convex action
@@ -36,15 +50,35 @@ export async function analyzeFileWithAI(
   console.log('[AI] Starting Gemini analysis for file:', file.name);
 
   try {
-    // Check file size (Gemini has limits - typically 20MB for images)
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    if (file.size > maxSize) {
-      console.warn(`File size (${file.size} bytes) exceeds Gemini limit, using fallback`);
+    // Check file size constraints
+    // 1. Convex action argument limit: 5MB total for all arguments
+    //    Base64 encoding increases size by ~33% (4/3 ratio), so limit original file to ~3.5MB
+    //    This leaves room for other arguments (mimeType, filename, mediaType object)
+    // 2. Gemini API limit: 20MB for images/videos
+    const geminiLimit = 20 * 1024 * 1024; // 20MB Gemini limit
+    
+    if (file.size > MAX_FILE_SIZE_FOR_AI) {
+      console.warn(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds Convex action argument limit (~3.5MB). Base64 encoding increases size by ~33%, and Convex actions have a 5MB total argument limit. Using fallback suggestions instead.`);
+      return getFallbackSuggestions(file, mediaType);
+    }
+    
+    if (file.size > geminiLimit) {
+      console.warn(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds Gemini limit (20MB), using fallback`);
       return getFallbackSuggestions(file, mediaType);
     }
 
     // Convert file to base64
     const base64 = await fileToBase64(file);
+    
+    // Final safety check: verify base64 string length doesn't exceed Convex limit
+    // Base64 string length in characters (each char = 1 byte in UTF-8)
+    // We need to account for other arguments too, so keep base64 under ~4.5MB
+    const maxBase64Size = 4.5 * 1024 * 1024; // 4.5MB to leave room for other args
+    
+    if (base64.length > maxBase64Size) {
+      console.warn(`Base64 string length (${(base64.length / 1024 / 1024).toFixed(2)}MB) exceeds safe limit for Convex action arguments, using fallback`);
+      return getFallbackSuggestions(file, mediaType);
+    }
 
     // Prepare MediaType data for the action
     const mediaTypeData = mediaType
@@ -56,7 +90,10 @@ export async function analyzeFileWithAI(
       : undefined;
 
     // Call Convex action
-    console.log('[AI] Calling Convex action with base64 data (length:', base64.length, ')');
+    // Log base64 size for debugging
+    const base64SizeMB = (base64.length / 1024 / 1024).toFixed(2);
+    console.log('[AI] Calling Convex action with base64 data (length:', base64.length, 'chars, ~', base64SizeMB, 'MB)');
+    
     const suggestions = await analyzeAction({
       base64,
       mimeType: file.type,
@@ -73,6 +110,16 @@ export async function analyzeFileWithAI(
       stack: error.stack,
       name: error.name
     } : error);
+    
+    // Check if error is related to Convex argument size limit
+    if (error instanceof Error && (
+      error.message.includes('arguments size is too large') ||
+      error.message.includes('maximum size is 5 MiB') ||
+      error.message.includes('5 MiB limit')
+    )) {
+      console.warn('[AI] File too large for Convex action arguments. Skipping AI analysis for this file.');
+      return getFallbackSuggestions(file, mediaType);
+    }
     
     // Return fallback suggestions on error
     return getFallbackSuggestions(file, mediaType);

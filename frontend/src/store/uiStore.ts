@@ -56,8 +56,8 @@ export const useUIStore = create<UIState>()(
       // Initial state
       viewMode: 'grid', // Default to grid view
       searchQuery: '', // Default to empty search
-      sortBy: 'filename', // Default sort by filename
-      sortDirection: 'asc', // Default ascending
+      sortBy: 'dateModified', // Default sort by date modified (newest first)
+      sortDirection: 'desc', // Default descending (newest at top)
       secondarySortBy: null, // No secondary sort by default
       secondarySortDirection: 'asc',
       selectedMediaTypes: [], // No media type filter by default
@@ -76,8 +76,8 @@ export const useUIStore = create<UIState>()(
       setSecondarySort: (field: SortField | null, direction: SortDirection) => 
         set({ secondarySortBy: field, secondarySortDirection: direction }),
       clearSorting: () => set({ 
-        sortBy: 'filename', 
-        sortDirection: 'asc', 
+        sortBy: 'dateModified', 
+        sortDirection: 'desc', 
         secondarySortBy: null,
         secondarySortDirection: 'asc'
       }),
