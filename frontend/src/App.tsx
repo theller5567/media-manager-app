@@ -4,7 +4,8 @@ import MediaLibrary from './pages/MediaLibrary'
 import MediaTypeCreator from './pages/MediaTypeCreator'
 import MediaDetail from './pages/MediaDetail'
 import TagManagement from './pages/TagManagement'
-
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 // Placeholder Page Components
 const Dashboard = () => (
   <div>
@@ -31,6 +32,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/library" element={<MediaLibrary />} />

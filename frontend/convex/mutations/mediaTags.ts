@@ -7,7 +7,6 @@ import { v } from "convex/values";
 export const create = mutation({
   args: {
     name: v.string(),
-    createdBy: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     // Validate name uniqueness (case-insensitive)
@@ -26,7 +25,6 @@ export const create = mutation({
     
     const mediaTagId = await ctx.db.insert("mediaTags", { 
       name: args.name.trim(),
-      createdBy: args.createdBy,
     });
     return await ctx.db.get(mediaTagId);
   },

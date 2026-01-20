@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Library, Tag, User, Settings, Plus } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
+import { useAuth } from '@/hooks/useAuth'
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -13,6 +14,17 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { currentUser, isLoading, isAuthenticated, signOut } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      navigate('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col bg-slate-900 text-white w-64">
@@ -43,6 +55,45 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* User info and logout */}
+      <div className="p-4 border-t border-slate-800">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-2">
+            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+          </div>
+        ) : isAuthenticated && currentUser ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
+                <User className="h-4 w-4 text-slate-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {currentUser.name || 'User'}
+                </p>
+                <p className="text-xs text-slate-400 truncate">
+                  {currentUser.email}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <Link
+            to="/login"
+            className="block w-full text-center rounded-md px-3 py-2 text-sm font-medium text-cyan-400 hover:bg-slate-800 transition-colors"
+          >
+            Sign In
+          </Link>
+        )}
+      </div>
 
       <div className="p-4 border-t border-slate-800 text-xs text-slate-500">
         v1.0.0
