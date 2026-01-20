@@ -3,7 +3,7 @@ import { api } from "../../../convex/_generated/api";
 import MediaTable from "./MediaTable";
 import { useViewMode, useSearchQuery } from "@/store/uiStore";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
-import { Search } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import ViewToggle from "../ui/viewToggle";
 import Pagination from "../ui/Pagination";
 import LazyImage from "../ui/LazyImage";
@@ -11,19 +11,34 @@ import LoadingSkeleton from "../ui/LoadingSkeleton";
 import MediaFilters from "../ui/MediaFilters";
 import { getAvailableTags } from "@/lib/filteringUtils";
 import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const MediaList = () => {
   const { viewMode } = useViewMode();
   const { searchQuery, setSearchQuery } = useSearchQuery();
-
-  // Fetch media from Convex
-  const mediaData = useQuery(api.queries.media.list) || [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { currentUser } = useAuth();
+  
+  // Check if filtering by "My Uploads"
+  const filterMyUploads = searchParams.get("filter") === "my-uploads";
+  
+  // Fetch media from Convex - use getMyUploads if filtering
+  const allMediaData = useQuery(api.queries.media.list) || [];
+  const myUploadsData = useQuery(
+    api.queries.media.getMyUploads,
+    currentUser ? {} : "skip"
+  ) || [];
+  
+  // Select which data to use based on filter
+  const mediaData = filterMyUploads ? myUploadsData : allMediaData;
   
   // Convert Convex data to MediaItem format (with id as string)
   const mediaItems = useMemo(() => {
     return mediaData.map((item: any) => ({
       ...item,
       id: item._id,
+      uploadedBy: item.uploadedBy,
       dateModified: new Date(item.dateModified),
     }));
   }, [mediaData]);
@@ -48,11 +63,20 @@ const MediaList = () => {
   const isFiltering = searchQuery.trim() !== "";
   const hasResults = paginatedData && paginatedData.length > 0;
 
+  const toggleMyUploads = () => {
+    if (filterMyUploads) {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", "my-uploads");
+    }
+    setSearchParams(searchParams);
+  };
+
   return (
     <div className="rounded-md bg-slate-800 p-2 flex flex-col flex-1 min-h-0">
       {/* Search Input */}
       <div className="flex items-center justify-between pb-4">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
             <input
@@ -66,6 +90,22 @@ const MediaList = () => {
             <span className="text-sm text-slate-400 ml-4">
               {totalCount} of {mediaItems.length} results
             </span>
+          )}
+          {/* My Uploads Filter Toggle */}
+          {currentUser && (
+            <button
+              onClick={toggleMyUploads}
+              className={`
+                flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                ${filterMyUploads 
+                  ? "bg-cyan-600 text-white" 
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                }
+              `}
+            >
+              <Filter className="h-4 w-4" />
+              {filterMyUploads ? "All Media" : "My Uploads"}
+            </button>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -90,7 +130,7 @@ const MediaList = () => {
                     {paginatedData.map((item) => (
                       <div
                         key={item.id}
-                        className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden"
+                        className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden group relative"
                       >
                         <LazyImage
                           src={item.mediaType === 'image' ? (item.thumbnail || '') : ''}
@@ -101,6 +141,12 @@ const MediaList = () => {
                           description={item.description}
                           showOverlay={true}
                         />
+                        {/* Uploader info overlay */}
+                        {item.uploadedBy && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Uploaded by: {item.uploadedBy}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -120,7 +166,12 @@ const MediaList = () => {
             ) : (
               <div className="col-span-full text-center py-12 flex-1 flex items-center justify-center">
                 <p className="text-slate-400">
-                  {isFiltering ? "No results found." : "No media files found."}
+                  {filterMyUploads 
+                    ? "You haven't uploaded any media yet." 
+                    : isFiltering 
+                      ? "No results found." 
+                      : "No media files found."
+                  }
                 </p>
               </div>
             )}

@@ -1,11 +1,14 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import MediaLibrary from './pages/MediaLibrary'
 import MediaTypeCreator from './pages/MediaTypeCreator'
 import MediaDetail from './pages/MediaDetail'
 import TagManagement from './pages/TagManagement'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import { useAuth } from './hooks/useAuth'
+
 // Placeholder Page Components
 const Dashboard = () => (
   <div>
@@ -28,13 +31,52 @@ const Settings = () => (
   </div>
 )
 
+// Component to redirect authenticated users away from login/signup
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to="/library" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route element={<DashboardLayout />}>
+        <Route 
+          path="/login" 
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } 
+        />
+        <Route 
+          path="/signup" 
+          element={
+            <PublicRoute>
+              <Signup />
+            </PublicRoute>
+          } 
+        />
+        <Route 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/" element={<Dashboard />} />
           <Route path="/library" element={<MediaLibrary />} />
           <Route path="/tag-management" element={<TagManagement />} />

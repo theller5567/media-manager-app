@@ -25,6 +25,7 @@ export interface MediaItem {
   relatedFiles?: string[]; // IDs of related media items
   customMetadata?: Record<string, any>; // Custom field values
   aiGenerated?: boolean;
+  uploadedBy?: string; // ID of the user who uploaded this media
 }
 
 /**

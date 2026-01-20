@@ -1,5 +1,6 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { requireAuth, isAdmin } from "../lib/auth";
 
 /**
  * Create a new media item
@@ -35,6 +36,9 @@ export const create = mutation({
     mockSourceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Require authentication
+    const user = await requireAuth(ctx);
+    
     const mediaId = await ctx.db.insert("media", {
       cloudinaryPublicId: args.cloudinaryPublicId,
       cloudinarySecureUrl: args.cloudinarySecureUrl,
@@ -57,6 +61,7 @@ export const create = mutation({
       dateModified: args.dateModified,
       isMockData: args.isMockData ?? false,
       mockSourceId: args.mockSourceId,
+      uploadedBy: user._id.toString(), // Track who uploaded this media (convert ID to string)
     });
     
     return await ctx.db.get(mediaId);
@@ -80,6 +85,23 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    // Require authentication
+    const user = await requireAuth(ctx);
+    
+    // Get the media item to check ownership
+    const media = await ctx.db.get(args.id);
+    if (!media) {
+      throw new Error("Media not found");
+    }
+    
+    // Check authorization: user can only edit their own media OR be admin
+    const userIsAdmin = await isAdmin(ctx);
+    const isOwner = media.uploadedBy === user._id.toString();
+    
+    if (!isOwner && !userIsAdmin) {
+      throw new Error("You can only edit your own media");
+    }
+    
     const { id, updates } = args;
     
     // Only update fields that are provided
@@ -103,6 +125,23 @@ export const update = mutation({
 export const deleteMedia = mutation({
   args: { id: v.id("media") },
   handler: async (ctx, args) => {
+    // Require authentication
+    const user = await requireAuth(ctx);
+    
+    // Get the media item to check ownership
+    const media = await ctx.db.get(args.id);
+    if (!media) {
+      throw new Error("Media not found");
+    }
+    
+    // Check authorization: user can only delete their own media OR be admin
+    const userIsAdmin = await isAdmin(ctx);
+    const isOwner = media.uploadedBy === user._id.toString();
+    
+    if (!isOwner && !userIsAdmin) {
+      throw new Error("You can only delete your own media");
+    }
+    
     await ctx.db.delete(args.id);
   },
 });
@@ -139,9 +178,10 @@ export const createInternal = internalMutation({
     dateModified: v.number(),
     isMockData: v.optional(v.boolean()),
     mockSourceId: v.optional(v.string()),
+    uploadedBy: v.optional(v.string()), // BetterAuth user ID (component table ID as string)
   },
   handler: async (ctx, args) => {
-    const mediaId = await ctx.db.insert("media", {
+    const insertData: any = {
       cloudinaryPublicId: args.cloudinaryPublicId,
       cloudinarySecureUrl: args.cloudinarySecureUrl,
       filename: args.filename,
@@ -163,8 +203,40 @@ export const createInternal = internalMutation({
       dateModified: args.dateModified,
       isMockData: args.isMockData ?? false,
       mockSourceId: args.mockSourceId,
-    });
+    };
+    if (args.uploadedBy) {
+      insertData.uploadedBy = args.uploadedBy as any; // Cast string to BetterAuth user ID type
+    }
+    const mediaId = await ctx.db.insert("media", insertData);
     
     return mediaId;
+  },
+});
+
+/**
+ * Internal mutation to set uploadedBy for existing media
+ */
+export const setUploadedByForMedia = internalMutation({
+  args: {
+    userId: v.string(), // BetterAuth user ID (component table ID as string)
+  },
+  handler: async (ctx, args) => {
+    // Get all media
+    const allMedia = await ctx.db
+      .query("media")
+      .collect();
+    
+    // Filter to only media without uploadedBy
+    const mediaWithoutUploader = allMedia.filter((m) => !m.uploadedBy);
+    
+    let updated = 0;
+    for (const media of mediaWithoutUploader) {
+      await ctx.db.patch(media._id, {
+        uploadedBy: args.userId as any, // Cast string to BetterAuth user ID type
+      });
+      updated++;
+    }
+    
+    return { updated };
   },
 });

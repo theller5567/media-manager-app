@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
@@ -8,17 +8,22 @@ import { formatFileSize } from "@/lib/mediaUtils";
 import { useState } from "react";
 import MediaEditDialog from "@/components/media/MediaEditDialog";
 import ReactPlayer from 'react-player'
+import { useAuth } from "@/hooks/useAuth";
+import { canEditMedia, canDeleteMedia } from "@/lib/rbac";
+import type { User } from "@/lib/rbac";
 
 const MediaDetail = () => {
   const { mediaId } = useParams<{ mediaId: string }>();
   const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  
+  const { currentUser } = useAuth();
   
   const mediaDoc = useQuery(
     api.queries.media.getById,
     mediaId ? { id: mediaId as Id<"media"> } : "skip"
   );
+  
+  const deleteMediaMutation = useMutation(api.mutations.media.deleteMedia);
   
   // Convert Convex document to MediaItem format
   const media = mediaDoc ? {
@@ -41,7 +46,13 @@ const MediaDetail = () => {
     customMetadata: mediaDoc.customMetadata,
     aiGenerated: mediaDoc.aiGenerated,
     dateModified: new Date(mediaDoc.dateModified),
+    uploadedBy: mediaDoc.uploadedBy,
   } : null;
+  
+  // Check permissions
+  // Cast currentUser to User type since BetterAuth returns Date objects for timestamps
+  const canEdit = media ? canEditMedia((currentUser as User | null), media as any) : false;
+  const canDelete = media ? canDeleteMedia((currentUser as User | null), media as any) : false;
   
   if (mediaDoc === undefined) {
     return (
@@ -66,10 +77,19 @@ const MediaDetail = () => {
     );
   }
 
-  const deleteMediaFIle = () => {
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this media file? This action cannot be undone.")) {
+      return;
+    }
     
+    try {
+      await deleteMediaMutation({ id: media.id as Id<"media"> });
+      navigate("/library");
+    } catch (error) {
+      console.error("Failed to delete media:", error);
+      alert("Failed to delete media. You may not have permission to delete this file.");
+    }
   };
-
 
   return (
     <>
@@ -88,16 +108,28 @@ const MediaDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         <div className="space-y-4 bg-slate-800 rounded-lg p-4 col-span-2">
-        <div className="flex justify-end gap-2">
-            <button className="cursor-pointer text-white hover:text-cyan-500 transition-colors" onClick={() => setEditDialogOpen(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                <span className="sr-only">Edit</span>
-            </button>
-            <button className="cursor-pointer text-white hover:text-cyan-500 transition-colors" onClick={deleteMediaFIle}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                <span className="sr-only">Delete</span>
-            </button>
-        </div>
+        {(canEdit || canDelete) && (
+          <div className="flex justify-end gap-2">
+            {canEdit && (
+              <button 
+                className="cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-700" 
+                onClick={() => setEditDialogOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+                <span>Edit</span>
+              </button>
+            )}
+            {canDelete && (
+              <button 
+                className="cursor-pointer text-white hover:text-red-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-700" 
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
+              </button>
+            )}
+          </div>
+        )}
           <div>
             {media.mediaType === 'image' ? (
             <LazyImage
@@ -138,6 +170,13 @@ const MediaDetail = () => {
             <h2 className="text-xl font-semibold text-white">Details</h2>
             
             <div className="space-y-3">
+              {media.uploadedBy && (
+                <div>
+                  <label className="text-sm font-medium text-slate-400">Uploaded By</label>
+                  <p className="text-white">{media.uploadedBy}</p>
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium text-slate-400">Filename</label>
                 <p className="text-white">{media.filename}</p>
@@ -208,11 +247,13 @@ const MediaDetail = () => {
         </div>
       </div>
     </div>
-    <MediaEditDialog
-      open={editDialogOpen}
-      onOpenChange={setEditDialogOpen}
-      media={media}
-    />
+    {canEdit && (
+      <MediaEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        media={media}
+      />
+    )}
     </>
   );
 };

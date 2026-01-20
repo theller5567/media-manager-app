@@ -45,10 +45,14 @@ export default defineSchema({
     // Mock data identification (for cleanup before production)
     isMockData: v.boolean(),
     mockSourceId: v.optional(v.string()),
+    
+    // User tracking - BetterAuth component table IDs stored as strings
+    uploadedBy: v.optional(v.string()),
   })
     .index("by_mediaType", ["mediaType"])
     .index("by_customMediaTypeId", ["customMediaTypeId"])
     .index("by_dateModified", ["dateModified"])
+    .index("by_uploadedBy", ["uploadedBy"])
     .searchIndex("search_title", {
       searchField: "title",
     }),
@@ -84,4 +88,3 @@ export default defineSchema({
   })
     .index("by_name", ["name"]),
 });
-

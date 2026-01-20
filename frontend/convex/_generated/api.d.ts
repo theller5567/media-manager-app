@@ -9,16 +9,20 @@
  */
 
 import type * as actions_analyzeMedia from "../actions/analyzeMedia.js";
+import type * as actions_migrateAuth from "../actions/migrateAuth.js";
 import type * as actions_migrateMediaTypes from "../actions/migrateMediaTypes.js";
 import type * as actions_migrateMockData from "../actions/migrateMockData.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as mutations_media from "../mutations/media.js";
 import type * as mutations_mediaTags from "../mutations/mediaTags.js";
 import type * as mutations_mediaTypes from "../mutations/mediaTypes.js";
+import type * as mutations_users from "../mutations/users.js";
 import type * as queries_media from "../queries/media.js";
 import type * as queries_mediaTags from "../queries/mediaTags.js";
 import type * as queries_mediaTypes from "../queries/mediaTypes.js";
+import type * as queries_users from "../queries/users.js";
 
 import type {
   ApiFromModules,
@@ -28,16 +32,20 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actions/analyzeMedia": typeof actions_analyzeMedia;
+  "actions/migrateAuth": typeof actions_migrateAuth;
   "actions/migrateMediaTypes": typeof actions_migrateMediaTypes;
   "actions/migrateMockData": typeof actions_migrateMockData;
   auth: typeof auth;
   http: typeof http;
+  "lib/auth": typeof lib_auth;
   "mutations/media": typeof mutations_media;
   "mutations/mediaTags": typeof mutations_mediaTags;
   "mutations/mediaTypes": typeof mutations_mediaTypes;
+  "mutations/users": typeof mutations_users;
   "queries/media": typeof queries_media;
   "queries/mediaTags": typeof queries_mediaTags;
   "queries/mediaTypes": typeof queries_mediaTypes;
+  "queries/users": typeof queries_users;
 }>;
 
 /**

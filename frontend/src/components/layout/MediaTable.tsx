@@ -16,169 +16,27 @@ import { format } from "date-fns";
 import { getMediaTypeIcon, formatFileSize, type MediaItem, getMediaTypeColor, getCustomMediaTypeById } from "@/lib/mediaUtils";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { MediaType } from "@/types/mediaType";
+import { useAuth } from "@/hooks/useAuth";
 
-const columns: ColumnDef<MediaItem>[] = [
-  {
-    accessorKey: "thumbnail",
-    header: "Thumbnail",
-    cell: ({ row }) => {
-      const item = row.original;
-      const Icon = getMediaTypeIcon(item.mediaType);
-      
-      // Helper function to check if URL is actually an image
-      const isImageUrl = (url: string): boolean => {
-        if (!url) return false;
-        const lowerUrl = url.toLowerCase();
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.bmp'];
-        const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'];
-        const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.flv'];
-        const documentExtensions = ['.pdf', '.doc', '.docx', '.txt'];
-        
-        // Known image hosting services (trust these URLs)
-        const imageHostingServices = ['picsum.photos', 'unsplash.com', 'pexels.com', 'imgur.com', 'cloudinary.com'];
-        if (imageHostingServices.some(service => lowerUrl.includes(service))) return true;
-        
-        // Check if URL contains audio/video/document extensions - definitely not an image
-        if (audioExtensions.some(ext => lowerUrl.includes(ext))) return false;
-        if (videoExtensions.some(ext => lowerUrl.includes(ext))) return false;
-        if (documentExtensions.some(ext => lowerUrl.includes(ext))) return false;
-        
-        // Check if URL contains image extensions - definitely an image
-        if (imageExtensions.some(ext => lowerUrl.includes(ext))) return true;
-        
-        // If mediaType is 'image' and URL doesn't have any conflicting extensions, trust it
-        // This handles URLs without extensions (like picsum.photos) when mediaType is correct
-        if (item.mediaType === 'image') return true;
-        
-        // Default: don't trust it if we can't determine
-        return false;
-      };
-      
-      // Only show image if mediaType is 'image' AND thumbnail is actually an image URL
-      const shouldShowImage = item.mediaType === 'image' && item.thumbnail && isImageUrl(item.thumbnail);
-      
-      return (
-        <div className="w-12 h-12 rounded border overflow-hidden bg-gray-100 flex items-center justify-center">
-          {shouldShowImage ? (
-            <img
-              src={item.thumbnail}
-              alt={item.filename}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            React.createElement(Icon, { className: "h-6 w-6 text-slate-400" })
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => {
-      const title = row.getValue("title") as string;
-      return (
-        <div className="font-medium text-sm max-w-xs truncate" title={title}>
-          <Link to={`/media/${row.original.id}`}>{title}</Link>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "mediaType",
-    header: "Type",
-    cell: ({ row, table }) => {
-      const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
-      const IconComponent = getMediaTypeIcon(mediaType);
-      // Get MediaType object from context (passed via table meta)
-      const customMediaType = row.original.customMediaTypeId 
-        ? (table.options.meta as any)?.getMediaType?.(row.original.customMediaTypeId)
-        : undefined;
-      const mediaColor = getMediaTypeColor(customMediaType);
-      
-      return (
-        <div className="flex items-center gap-2">
-          <span style={{ color: mediaColor }}>
-            {React.createElement(IconComponent, { className: "h-4 w-4" })}
-          </span>
-          <span className="text-sm capitalize">{mediaType}</span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "fileSize",
-    header: "Size",
-    cell: ({ row }) => {
-      const fileSize = row.getValue("fileSize") as number;
-      return (
-        <span className="text-sm text-gray-600">
-          {formatFileSize(fileSize)}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "customMediaTypeId",
-    header: "Custom Type",
-    cell: ({ row, table }) => {
-      const customMediaTypeId = row.getValue("customMediaTypeId") as string;
-      // Get MediaType object from context (passed via table meta)
-      const customMediaType = customMediaTypeId 
-        ? (table.options.meta as any)?.getMediaType?.(customMediaTypeId)
-        : undefined;
-      const customMediaTypeName = getCustomMediaTypeById(customMediaType);
-      return (
-        <span className="text-sm text-gray-600">
-          {customMediaTypeName}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "tags",
-    header: "Tags",
-    cell: ({ row }) => {
-      const tags = row.getValue("tags") as string[];
-      return (
-        <div className="flex flex-wrap gap-1 max-w-xs">
-          {tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-          {tags.length > 3 && (
-            <Badge variant="outline" className="text-xs text-white">
-              +{tags.length - 3}
-            </Badge>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "dateModified",
-    header: "Modified",
-    cell: ({ row }) => {
-      const date = row.getValue("dateModified") as Date;
-      return (
-        <span className="text-sm text-gray-600">
-          {format(date, "MMM dd, yyyy")}
-        </span>
-      );
-    },
-  },
-];
-
-interface MediaTableProps {
-  // No longer receives data as prop - uses usePaginatedMedia hook internally
-}
-
-export const MediaTable: React.FC<MediaTableProps> = () => {
-  // Fetch media from Convex
-  const mediaData = useQuery(api.queries.media.list) || [];
+const MediaTable: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const { currentUser } = useAuth();
+  
+  // Check if filtering by "My Uploads"
+  const filterMyUploads = searchParams.get("filter") === "my-uploads";
+  
+  // Fetch media from Convex - use getMyUploads if filtering
+  const allMediaData = useQuery(api.queries.media.list) || [];
+  const myUploadsData = useQuery(
+    api.queries.media.getMyUploads,
+    currentUser ? {} : "skip"
+  ) || [];
+  
+  // Select which data to use based on filter
+  const mediaData = filterMyUploads ? myUploadsData : allMediaData;
+  
   // Fetch MediaTypes from Convex
   const mediaTypesData = useQuery(api.queries.mediaTypes.list) || [];
   
@@ -189,8 +47,8 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
       map.set(mt._id, { 
         ...mt, 
         id: mt._id,
-        createdAt: new Date(mt.createdAt), // Convert number to Date object
-        updatedAt: new Date(mt.updatedAt), // Convert number to Date object
+        createdAt: new Date(mt.createdAt),
+        updatedAt: new Date(mt.updatedAt),
       });
     });
     return map;
@@ -204,6 +62,165 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
       dateModified: new Date(item.dateModified),
     }));
   }, [mediaData]);
+
+  // Define columns with uploader column
+  const columns: ColumnDef<MediaItem>[] = useMemo(() => [
+    {
+      accessorKey: "thumbnail",
+      header: "Thumbnail",
+      cell: ({ row }) => {
+        const item = row.original;
+        const Icon = getMediaTypeIcon(item.mediaType);
+        
+        const isImageUrl = (url: string): boolean => {
+          if (!url) return false;
+          const lowerUrl = url.toLowerCase();
+          const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.bmp'];
+          const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'];
+          const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.flv'];
+          const documentExtensions = ['.pdf', '.doc', '.docx', '.txt'];
+          
+          const imageHostingServices = ['picsum.photos', 'unsplash.com', 'pexels.com', 'imgur.com', 'cloudinary.com'];
+          if (imageHostingServices.some(service => lowerUrl.includes(service))) return true;
+          
+          if (audioExtensions.some(ext => lowerUrl.includes(ext))) return false;
+          if (videoExtensions.some(ext => lowerUrl.includes(ext))) return false;
+          if (documentExtensions.some(ext => lowerUrl.includes(ext))) return false;
+          
+          if (imageExtensions.some(ext => lowerUrl.includes(ext))) return true;
+          if (item.mediaType === 'image') return true;
+          
+          return false;
+        };
+        
+        const shouldShowImage = item.mediaType === 'image' && item.thumbnail && isImageUrl(item.thumbnail);
+        
+        return (
+          <div className="w-12 h-12 rounded border overflow-hidden bg-gray-100 flex items-center justify-center">
+            {shouldShowImage ? (
+              <img
+                src={item.thumbnail}
+                alt={item.filename}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              React.createElement(Icon, { className: "h-6 w-6 text-slate-400" })
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => {
+        const title = row.getValue("title") as string;
+        return (
+          <div className="font-medium text-sm max-w-xs truncate" title={title}>
+            <Link to={`/media/${row.original.id}`}>{title}</Link>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "mediaType",
+      header: "Type",
+      cell: ({ row, table }) => {
+        const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
+        const IconComponent = getMediaTypeIcon(mediaType);
+        const customMediaType = row.original.customMediaTypeId 
+          ? (table.options.meta as any)?.getMediaType?.(row.original.customMediaTypeId)
+          : undefined;
+        const mediaColor = getMediaTypeColor(customMediaType);
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span style={{ color: mediaColor }}>
+              {React.createElement(IconComponent, { className: "h-4 w-4" })}
+            </span>
+            <span className="text-sm capitalize">{mediaType}</span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "uploadedBy",
+      header: "Uploaded By",
+      cell: ({ row }) => {
+        const uploadedBy = (row.original as any).uploadedBy;
+        if (!uploadedBy) {
+          return <span className="text-sm text-slate-400">Unknown</span>;
+        }
+        // For now, show the user ID - can be enhanced to show user name
+        return (
+          <span className="text-sm text-slate-300">
+            {uploadedBy}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "fileSize",
+      header: "Size",
+      cell: ({ row }) => {
+        const fileSize = row.getValue("fileSize") as number;
+        return (
+          <span className="text-sm text-gray-600">
+            {formatFileSize(fileSize)}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "customMediaTypeId",
+      header: "Custom Type",
+      cell: ({ row, table }) => {
+        const customMediaTypeId = row.getValue("customMediaTypeId") as string;
+        const customMediaType = customMediaTypeId 
+          ? (table.options.meta as any)?.getMediaType?.(customMediaTypeId)
+          : undefined;
+        const customMediaTypeName = getCustomMediaTypeById(customMediaType);
+        return (
+          <span className="text-sm text-gray-600">
+            {customMediaTypeName}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "tags",
+      header: "Tags",
+      cell: ({ row }) => {
+        const tags = row.getValue("tags") as string[];
+        return (
+          <div className="flex flex-wrap gap-1 max-w-xs">
+            {tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+            {tags.length > 3 && (
+              <Badge variant="outline" className="text-xs text-white">
+                +{tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "dateModified",
+      header: "Modified",
+      cell: ({ row }) => {
+        const date = row.getValue("dateModified") as Date;
+        return (
+          <span className="text-sm text-gray-600">
+            {format(date, "MMM dd, yyyy")}
+          </span>
+        );
+      },
+    },
+  ], []);
 
   // Use paginated media hook for table mode (infinite scroll)
   const { data, isLoading, hasMore, loadMore } = usePaginatedMedia({
@@ -227,8 +244,8 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
   const rowVirtualizer = useVirtualizer({
     count: data.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 60, // Estimated row height
-    overscan: 5, // Render 5 extra rows outside viewport for smoother scrolling
+    estimateSize: () => 60,
+    overscan: 5,
   });
 
   // Get visible rows from virtualizer
@@ -259,13 +276,11 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
 
   return (
     <div className="rounded-md border border-slate-700 overflow-hidden flex flex-col h-full">
-      {/* Single table structure for proper column alignment */}
       <div
         ref={parentRef}
         className="flex-1 min-h-0 overflow-auto relative"
       >
         <Table>
-          {/* Fixed header */}
           <TableHeader className="sticky top-0 z-10 bg-slate-800">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -282,17 +297,20 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
             ))}
           </TableHeader>
           
-          {/* Virtualized body */}
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  <p className="text-slate-400">No media files found.</p>
+                  <p className="text-slate-400">
+                    {filterMyUploads 
+                      ? "You haven't uploaded any media yet." 
+                      : "No media files found."
+                    }
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
               <>
-                {/* Top spacer - single cell spanning all columns */}
                 {virtualRows.length > 0 && virtualRows[0]?.start > 0 && (
                   <TableRow style={{ height: `${virtualRows[0].start}px` }}>
                     {columns.map((_, index) => (
@@ -301,7 +319,6 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
                   </TableRow>
                 )}
                 
-                {/* Visible rows */}
                 {virtualRows.map((virtualRow) => {
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
@@ -321,7 +338,6 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
                   );
                 })}
 
-                {/* Bottom spacer */}
                 {virtualRows.length > 0 && (
                   <TableRow
                     style={{
@@ -337,7 +353,6 @@ export const MediaTable: React.FC<MediaTableProps> = () => {
                   </TableRow>
                 )}
 
-                {/* Infinite scroll trigger */}
                 {hasMore && (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="py-4" style={{ paddingBottom: '40px' }}>

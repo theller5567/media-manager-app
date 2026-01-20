@@ -1,11 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2 } from 'lucide-react'
+import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2, FolderOpen } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Media Library', href: '/library', icon: Library },
+  { label: 'My Uploads', href: '/library?filter=my-uploads', icon: FolderOpen },
   { label: 'Tag Management', href: '/tag-management', icon: Tag },
   { label: 'Media Type Creator', href: '/media-type-creator', icon: Plus },
   { label: 'Profile', href: '/profile', icon: User },
@@ -16,6 +19,9 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { currentUser, isLoading, isAuthenticated, signOut } = useAuth()
+  
+  // Check admin status server-side
+  const isAdmin = useQuery(api.queries.users.checkIsAdmin) ?? false
 
   const handleLogout = async () => {
     try {
@@ -26,6 +32,15 @@ export function Sidebar() {
     }
   }
 
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter((item) => {
+    // Hide admin-only items if user is not admin
+    if (item.href === '/tag-management' || item.href === '/media-type-creator') {
+      return isAdmin
+    }
+    return true
+  })
+
   return (
     <div className="flex h-full flex-col bg-slate-900 text-white w-64">
       <div className="p-6">
@@ -33,8 +48,9 @@ export function Sidebar() {
       </div>
       
       <nav className="flex-1 space-y-1 px-3">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.href
+        {filteredNavItems.map((item) => {
+          const isActive = location.pathname === item.href || 
+            (item.href.includes('/library') && location.pathname === '/library')
           return (
             <Link
               key={item.href}
@@ -69,9 +85,16 @@ export function Sidebar() {
                 <User className="h-4 w-4 text-slate-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {currentUser.name || 'User'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-white truncate">
+                    {currentUser.name || 'User'}
+                  </p>
+                  {isAdmin && (
+                    <span className="px-1.5 py-0.5 text-xs font-medium bg-cyan-600 text-white rounded">
+                      Admin
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400 truncate">
                   {currentUser.email}
                 </p>
