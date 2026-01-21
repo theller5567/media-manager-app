@@ -1,7 +1,7 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LazyImage } from '@/components/ui/LazyImage';

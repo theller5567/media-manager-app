@@ -136,6 +136,7 @@ const MediaDetail = () => {
               src={media.thumbnail}
               alt={media.altText || media.title}
               mediaType={media.mediaType}
+              showOverlay={false}
               className="w-full h-auto rounded"
             />
             ) : media.mediaType === 'video' || media.mediaType === 'audio' ? (

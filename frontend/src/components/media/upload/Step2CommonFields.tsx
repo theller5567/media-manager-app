@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { CommonFields, AISuggestions } from '@/types/upload';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { twMerge } from 'tailwind-merge';
 import { getAvailableTags } from '@/lib/filteringUtils';
 import { mockMediaData } from '@/data/mockMediaData';

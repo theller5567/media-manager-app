@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@/components/ui/Dialog';
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { Step1FilesAndMediaType } from './upload/Step1FilesAndMediaType';

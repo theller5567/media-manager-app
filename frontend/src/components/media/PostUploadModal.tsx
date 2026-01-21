@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/Dialog';
 import LazyImage from '@/components/ui/LazyImage';
 import { getMediaTypeIcon } from '@/lib/mediaUtils';
 

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Upload, X, FileImage, FileVideo, FileText, FileAudio, File, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import type { FilePreview } from '@/types/upload';
 import type { MediaType } from '@/types/mediaType';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { twMerge } from 'tailwind-merge';
 
 interface Step1FilesAndMediaTypeProps {

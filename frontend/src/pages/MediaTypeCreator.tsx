@@ -6,6 +6,7 @@ import type { Id } from '../../convex/_generated/dataModel';
 import type { MediaType } from '@/types/mediaType';
 import { MediaTypeList } from '@/components/media/MediaTypeList';
 import { MediaTypeForm } from '@/components/media/MediaTypeForm';
+import Header from '../components/layout/Header';
 
 const MediaTypeCreator = () => {
   const [editingMediaType, setEditingMediaType] = useState<MediaType | null>(null);
@@ -163,16 +164,10 @@ const MediaTypeCreator = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full flex-1 min-h-0 p-6">
+    <div className="flex flex-col gap-6 h-full flex-1 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between shrink-0 bg-slate-800 p-4 rounded-sm">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Media Type Management</h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Create and manage custom MediaTypes with format restrictions, custom fields, and default tags
-          </p>
-        </div>
-        {!showForm && (
+      <Header title="Media Type Management" description="Create and manage custom MediaTypes with format restrictions, custom fields, and default tags">
+      {!showForm && (
           <button
             onClick={handleCreate}
             className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 text-white font-medium hover:bg-cyan-600 transition-colors"
@@ -181,7 +176,7 @@ const MediaTypeCreator = () => {
             Create MediaType
           </button>
         )}
-      </div>
+      </Header>
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto bg-slate-800 p-4 rounded-sm">

@@ -7,7 +7,7 @@ import { validateMediaType, validateFieldName } from '@/lib/mediaTypeUtils';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { FormatSelector } from './FormatSelector';
 import { FieldBuilder } from './FieldBuilder';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator';
 import { twMerge } from 'tailwind-merge';
 

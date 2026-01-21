@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Edit, Trash2, FileText } from 'lucide-react';
 import type { MediaType } from '@/types/mediaType';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 
 interface MediaTypeListProps {
   mediaTypes: MediaType[];

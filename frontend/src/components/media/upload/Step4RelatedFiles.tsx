@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, X, Link2 } from 'lucide-react';
 import { mockMediaData } from '@/data/mockMediaData';
 import { filterMediaItems } from '@/lib/mediaUtils';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { twMerge } from 'tailwind-merge';
 import LazyImage from '@/components/ui/LazyImage';
 import { getMediaTypeIcon } from '@/lib/mediaUtils';

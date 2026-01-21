@@ -1,35 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { DashboardLayout } from './components/layout/DashboardLayout'
-import { ProtectedRoute } from './components/auth/ProtectedRoute'
-import MediaLibrary from './pages/MediaLibrary'
-import MediaTypeCreator from './pages/MediaTypeCreator'
-import MediaDetail from './pages/MediaDetail'
-import TagManagement from './pages/TagManagement'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import { useAuth } from './hooks/useAuth'
+import { DashboardLayout } from '@/components/layout/BaseLayout'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import MediaLibrary from '@/pages/MediaLibrary'
+import MediaTypeCreator from '@/pages/MediaTypeCreator'
+import MediaDetail from '@/pages/MediaDetail'
+import TagManagement from '@/pages/TagManagement'
+import Profile from '@/pages/Profile'
+import Login from '@/pages/Login'
+import Signup from '@/pages/Signup'
+import { useAuth } from '@/hooks/useAuth'
+import Dashboard from '@/pages/Dashboard'
+import Settings from '@/pages/Settings'
 
-// Placeholder Page Components
-const Dashboard = () => (
-  <div>
-    <h2 className="text-2xl font-bold text-slate-900">Dashboard Overview</h2>
-    <p className="mt-2 text-slate-600">Welcome back to your media manager.</p>
-  </div>
-)
-
-const UserProfile = () => (
-  <div>
-    <h2 className="text-2xl font-bold text-slate-900">User Profile</h2>
-    <p className="mt-2 text-slate-600">Update your personal information and preferences.</p>
-  </div>
-)
-
-const Settings = () => (
-  <div>
-    <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
-    <p className="mt-2 text-slate-600">Configure global application settings and integrations.</p>
-  </div>
-)
 
 // Component to redirect authenticated users away from login/signup
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -81,7 +63,7 @@ function App() {
           <Route path="/library" element={<MediaLibrary />} />
           <Route path="/tag-management" element={<TagManagement />} />
           <Route path="/media-type-creator" element={<MediaTypeCreator />} />
-          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/media/:mediaId" element={<MediaDetail />} />
         </Route>

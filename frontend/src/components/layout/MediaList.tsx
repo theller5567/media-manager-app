@@ -4,7 +4,7 @@ import MediaTable from "./MediaTable";
 import { useViewMode, useSearchQuery } from "@/store/uiStore";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
 import { Search, Filter } from "lucide-react";
-import ViewToggle from "../ui/viewToggle";
+import ViewToggle from "../ui/ViewToggle";
 import Pagination from "../ui/Pagination";
 import LazyImage from "../ui/LazyImage";
 import LoadingSkeleton from "../ui/LoadingSkeleton";
@@ -142,11 +142,11 @@ const MediaList = () => {
                           showOverlay={true}
                         />
                         {/* Uploader info overlay */}
-                        {item.uploadedBy && (
+                        {/* {item.uploadedBy && (
                           <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             Uploaded by: {item.uploadedBy}
                           </div>
-                        )}
+                        )} */}
                       </div>
                     ))}
                   </div>

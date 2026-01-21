@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Edit, Trash2, Tag, Search, Loader2 } from 'lucide-react';
 import type { MediaTag } from '@/types/mediaTag';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
 
 interface MediaTagListProps {

@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle, XCircle, Edit } from 'lucide-react';
 import type { FilePreview } from '@/types/upload';
 import type { MediaType as MediaTypeFromTypes } from '@/types/mediaType';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import { twMerge } from 'tailwind-merge';
 
 import LazyImage from '@/components/ui/LazyImage';

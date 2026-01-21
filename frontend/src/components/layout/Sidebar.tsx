@@ -4,6 +4,7 @@ import { twMerge } from 'tailwind-merge'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import Avatar from '../ui/Avatar'
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -81,8 +82,8 @@ export function Sidebar() {
         ) : isAuthenticated && currentUser ? (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
-                <User className="h-4 w-4 text-slate-400" />
+              <div className="flex items-center justify-center">
+                <Avatar user={currentUser} size='small' />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

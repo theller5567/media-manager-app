@@ -52,7 +52,7 @@ export function FormatSelector({ selectedFormats, onChange, className }: FormatS
       {/* Format Categories */}
       {Object.entries(formatsByCategory).map(([category, formats]) => {
         const allSelected = formats.every((f) => selectedFormats.includes(f));
-        const someSelected = formats.some((f) => selectedFormats.includes(f));
+        // const someSelected = formats.some((f) => selectedFormats.includes(f));
 
         return (
           <div key={category} className="space-y-2">

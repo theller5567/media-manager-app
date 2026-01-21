@@ -10,8 +10,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui/DataTable";
+import { Badge } from "@/components/ui/Badge";
 import { format } from "date-fns";
 import { getMediaTypeIcon, formatFileSize, type MediaItem, getMediaTypeColor, getCustomMediaTypeById } from "@/lib/mediaUtils";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
@@ -117,48 +117,48 @@ const MediaTable: React.FC = () => {
         const title = row.getValue("title") as string;
         return (
           <div className="font-medium text-sm max-w-xs truncate" title={title}>
-            <Link to={`/media/${row.original.id}`}>{title}</Link>
+            <Link to={`/media/${row.original.id}`} title={title}>{title.length > 20 ? title.slice(0, 20) + "..." : title}</Link>
           </div>
         );
       },
     },
-    {
-      accessorKey: "mediaType",
-      header: "Type",
-      cell: ({ row, table }) => {
-        const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
-        const IconComponent = getMediaTypeIcon(mediaType);
-        const customMediaType = row.original.customMediaTypeId 
-          ? (table.options.meta as any)?.getMediaType?.(row.original.customMediaTypeId)
-          : undefined;
-        const mediaColor = getMediaTypeColor(customMediaType);
+    // {
+    //   accessorKey: "mediaType",
+    //   header: "Type",
+    //   cell: ({ row, table }) => {
+    //     const mediaType = row.getValue("mediaType") as MediaItem["mediaType"];
+    //     const IconComponent = getMediaTypeIcon(mediaType);
+    //     const customMediaType = row.original.customMediaTypeId 
+    //       ? (table.options.meta as any)?.getMediaType?.(row.original.customMediaTypeId)
+    //       : undefined;
+    //     const mediaColor = getMediaTypeColor(customMediaType);
         
-        return (
-          <div className="flex items-center gap-2">
-            <span style={{ color: mediaColor }}>
-              {React.createElement(IconComponent, { className: "h-4 w-4" })}
-            </span>
-            <span className="text-sm capitalize">{mediaType}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "uploadedBy",
-      header: "Uploaded By",
-      cell: ({ row }) => {
-        const uploadedBy = (row.original as any).uploadedBy;
-        if (!uploadedBy) {
-          return <span className="text-sm text-slate-400">Unknown</span>;
-        }
-        // For now, show the user ID - can be enhanced to show user name
-        return (
-          <span className="text-sm text-slate-300">
-            {uploadedBy}
-          </span>
-        );
-      },
-    },
+    //     return (
+    //       <div className="flex items-center gap-2">
+    //         <span style={{ color: mediaColor }}>
+    //           {React.createElement(IconComponent, { className: "h-4 w-4" })}
+    //         </span>
+    //         <span className="text-sm capitalize">{mediaType}</span>
+    //       </div>
+    //     );
+    //   },
+    // },
+    // {
+    //   accessorKey: "uploadedBy",
+    //   header: "Uploaded By",
+    //   cell: ({ row }) => {
+    //     const uploadedBy = (row.original as any).uploadedBy;
+    //     if (!uploadedBy) {
+    //       return <span className="text-sm text-slate-400">Unknown</span>;
+    //     }
+    //     // For now, show the user ID - can be enhanced to show user name
+    //     return (
+    //       <span className="text-sm text-slate-300">
+    //         {uploadedBy}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       accessorKey: "fileSize",
       header: "Size",
@@ -180,8 +180,9 @@ const MediaTable: React.FC = () => {
           ? (table.options.meta as any)?.getMediaType?.(customMediaTypeId)
           : undefined;
         const customMediaTypeName = getCustomMediaTypeById(customMediaType);
+        const mediaTypeColor = getMediaTypeColor(customMediaType);
         return (
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600" style={{ color: mediaTypeColor }}>
             {customMediaTypeName}
           </span>
         );

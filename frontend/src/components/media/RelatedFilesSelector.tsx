@@ -2,9 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Search, X } from 'lucide-react';
-import type { MediaItem } from '@/lib/mediaUtils';
 import { filterMediaItems } from '@/lib/mediaUtils';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/Badge';
 import LazyImage from '@/components/ui/LazyImage';
 import { getMediaTypeIcon } from '@/lib/mediaUtils';
 
