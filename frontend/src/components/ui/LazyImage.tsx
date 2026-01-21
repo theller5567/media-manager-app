@@ -103,8 +103,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   // Determine if we should show an image or icon placeholder
-  // Only show image if: mediaType is 'image' AND src is valid AND src appears to be an image URL
-  const shouldShowImage = src && src.trim() !== '' && mediaType === 'image' && isImageUrl(src);
+  // Show image if: (mediaType is 'image' OR 'video') AND src is valid AND src appears to be an image URL
+  // Videos now have uploaded thumbnail images, so they should display thumbnails too
+  const shouldShowImage = src && src.trim() !== '' && (mediaType === 'image' || mediaType === 'video') && isImageUrl(src);
   const showPlaceholder = !shouldShowImage || hasError || !isInView;
 
   return (

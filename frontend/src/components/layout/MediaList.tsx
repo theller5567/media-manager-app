@@ -133,7 +133,7 @@ const MediaList = () => {
                         className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden group relative"
                       >
                         <LazyImage
-                          src={item.mediaType === 'image' ? (item.thumbnail || '') : ''}
+                          src={item.thumbnail || ''}
                           alt={item.altText || item.filename}
                           className="w-full h-full"
                           mediaType={item.mediaType}

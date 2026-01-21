@@ -93,10 +93,13 @@ const MediaTable: React.FC = () => {
           return false;
         };
         
-        const shouldShowImage = item.mediaType === 'image' && item.thumbnail && isImageUrl(item.thumbnail);
+        // Show thumbnail for images and videos (videos now have uploaded thumbnails)
+        const shouldShowImage = (item.mediaType === 'image' || item.mediaType === 'video') 
+          && item.thumbnail 
+          && isImageUrl(item.thumbnail);
         
         return (
-          <div className="w-12 h-12 rounded border overflow-hidden bg-gray-100 flex items-center justify-center">
+          <div className="w-12 h-12 rounded border overflow-hidden bg-gray-900 flex items-center justify-center">
             {shouldShowImage ? (
               <img
                 src={item.thumbnail}
@@ -104,7 +107,7 @@ const MediaTable: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              React.createElement(Icon, { className: "h-6 w-6 text-slate-400" })
+              React.createElement(Icon, { className: "h-6 w-6 text-white" })
             )}
           </div>
         );

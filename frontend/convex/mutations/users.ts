@@ -9,16 +9,40 @@ import { requireAuth, requireRole } from "../lib/auth";
 export const updateProfile = mutation({
   args: {
     name: v.optional(v.string()),
+    gradient: v.optional(v.string()),
+    email: v.optional(v.string()),
+    image: v.optional(v.union(v.string(), v.null())),
     // Add other profile fields as needed
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx);
+    const userId = user._id.toString();
     
-    // Note: BetterAuth manages user data in component tables
-    // Profile updates would need to go through BetterAuth API
-    // This is a placeholder for future implementation
+    // Find existing preferences or create new
+    const existingPrefs = await ctx.db
+      .query("userPreferences")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
     
-    return { success: true, userId: user._id };
+    if (existingPrefs) {
+      // Update existing preferences
+      const updates: any = {};
+      if (args.gradient !== undefined) {
+        updates.gradient = args.gradient;
+      }
+      // Note: name, email, image are managed by BetterAuth
+      // We only store custom preferences here
+      
+      await ctx.db.patch(existingPrefs._id, updates);
+      return { success: true, userId: user._id };
+    } else {
+      // Create new preferences
+      await ctx.db.insert("userPreferences", {
+        userId,
+        gradient: args.gradient,
+      });
+      return { success: true, userId: user._id };
+    }
   },
 });
 

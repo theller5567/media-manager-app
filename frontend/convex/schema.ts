@@ -87,4 +87,10 @@ export default defineSchema({
     name: v.string(),
   })
     .index("by_name", ["name"]),
+  userPreferences: defineTable({
+    userId: v.string(), // BetterAuth component table ID stored as string
+    gradient: v.optional(v.string()), // Gradient class string
+    // Add other preferences as needed
+  })
+    .index("by_userId", ["userId"]),
 });

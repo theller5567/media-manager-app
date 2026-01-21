@@ -534,23 +534,70 @@ export function useMediaUpload() {
       return { ...prev, uploading: true, uploadProgress: {} };
     });
 
-    const { uploadFile } = await import('@/lib/cloudinary');
+    const { uploadFile, uploadThumbnail } = await import('@/lib/cloudinary');
     const uploadedItems: any[] = [];
 
     try {
       for (let i = 0; i < currentState!.files.length; i++) {
         const filePreview = currentState!.files[i];
         try {
+          let thumbnailUrl = '';
+          
+          // For video files, upload thumbnail first (before video upload) for better UX
+          if (filePreview.type === 'video' && filePreview.thumbnailFile) {
+            console.log(`[Video Upload] Starting thumbnail upload for ${filePreview.file.name}`, {
+              thumbnailFile: filePreview.thumbnailFile.name,
+              thumbnailSize: filePreview.thumbnailFile.size,
+            });
+            try {
+              const thumbnailResult = await uploadThumbnail(filePreview.thumbnailFile, (progress) => {
+                // Track thumbnail upload progress (0-50% of total progress for this file)
+                setState((prev) => ({
+                  ...prev,
+                  uploadProgress: {
+                    ...prev.uploadProgress,
+                    [filePreview.id]: Math.floor(progress * 0.5), // Thumbnail is 50% of progress
+                  },
+                }));
+                if (onProgress) {
+                  onProgress(filePreview.id, Math.floor(progress * 0.5));
+                }
+              });
+              thumbnailUrl = thumbnailResult.secureUrl;
+              console.log(`[Video Upload] Thumbnail uploaded successfully:`, {
+                thumbnailUrl,
+                publicId: thumbnailResult.publicId,
+              });
+              
+              // Revoke thumbnail preview blob URL after successful upload
+              if (filePreview.preview && filePreview.preview.startsWith('blob:')) {
+                revokePreviewUrl(filePreview.preview);
+              }
+            } catch (error) {
+              // If thumbnail upload fails, fallback to Cloudinary's automatic thumbnail
+              console.warn('[Video Upload] Thumbnail upload failed, falling back to Cloudinary automatic thumbnail:', error);
+              // Will set thumbnailUrl below using generateVideoThumbnailUrl
+            }
+          } else if (filePreview.type === 'video') {
+            console.warn(`[Video Upload] No thumbnailFile found for ${filePreview.file.name} - thumbnail extraction may have failed`);
+          }
+          
+          // Upload the main file
           const result = await uploadFile(filePreview.file, (progress) => {
+            // For video files with thumbnail, video upload is 50-100% of progress
+            // For other files, it's 0-100%
+            const baseProgress = filePreview.type === 'video' && filePreview.thumbnailFile ? 50 : 0;
+            const adjustedProgress = baseProgress + Math.floor(progress * (filePreview.type === 'video' && filePreview.thumbnailFile ? 0.5 : 1));
+            
             setState((prev) => ({
               ...prev,
               uploadProgress: {
                 ...prev.uploadProgress,
-                [filePreview.id]: progress,
+                [filePreview.id]: adjustedProgress,
               },
             }));
             if (onProgress) {
-              onProgress(filePreview.id, progress);
+              onProgress(filePreview.id, adjustedProgress);
             }
           });
 
@@ -559,25 +606,23 @@ export function useMediaUpload() {
           
           // Generate thumbnail URL from Cloudinary (not blob URL)
           // Blob URLs are temporary and don't work after navigation
-          // Use secureUrl directly for now - Cloudinary URLs work reliably
-          // TODO: Optimize with thumbnail transformations once we verify publicId format
-          let thumbnailUrl = '';
-          if (filePreview.type === 'image') {
-            // For images, use the secureUrl directly (Cloudinary serves optimized images)
-            // Alternatively, we could use generateThumbnailUrl but secureUrl is more reliable
-            thumbnailUrl = result.secureUrl;
-          } else if (filePreview.type === 'video') {
-            // For videos, try to generate thumbnail from video frame
-            // Cloudinary video URLs can have .jpg appended for thumbnails
-            try {
-              thumbnailUrl = generateVideoThumbnailUrl(result.publicId, { width: 300, height: 300, crop: 'fill' });
-            } catch (error) {
-              // Fallback to secureUrl if thumbnail generation fails
+          if (!thumbnailUrl) {
+            if (filePreview.type === 'image') {
+              // For images, use the secureUrl directly (Cloudinary serves optimized images)
               thumbnailUrl = result.secureUrl;
+            } else if (filePreview.type === 'video') {
+              // For videos, try to generate thumbnail from video frame (fallback)
+              // Cloudinary video URLs can have .jpg appended for thumbnails
+              try {
+                thumbnailUrl = generateVideoThumbnailUrl(result.publicId, { width: 300, height: 300, crop: 'fill' });
+              } catch (error) {
+                // Fallback to secureUrl if thumbnail generation fails
+                thumbnailUrl = result.secureUrl;
+              }
+            } else {
+              // For other types, use empty string (will show icon instead)
+              thumbnailUrl = '';
             }
-          } else {
-            // For other types, use empty string (will show icon instead)
-            thumbnailUrl = '';
           }
           
           // Revoke the blob URL since we're using Cloudinary URL instead

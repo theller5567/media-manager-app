@@ -261,6 +261,87 @@ async function uploadRegularFile(
 }
 
 /**
+ * Upload thumbnail image to Cloudinary
+ * Forces resource_type to 'image' and optimizes for thumbnail size
+ */
+export async function uploadThumbnail(
+  thumbnailFile: File,
+  onProgress?: (progress: number) => void
+): Promise<UploadResult> {
+  if (!cloudinaryConfig) {
+    configureCloudinary();
+  }
+
+  if (!cloudinaryConfig) {
+    throw new Error('Cloudinary not configured. Please set environment variables.');
+  }
+
+  const config = cloudinaryConfig;
+
+  // Force resource_type to 'image' for thumbnails
+  const formData = new FormData();
+  formData.append('file', thumbnailFile);
+  formData.append('upload_preset', config.uploadPreset);
+  formData.append('api_key', config.apiKey);
+  formData.append('resource_type', 'image');
+  
+  // Add folder prefix to organize thumbnails
+  formData.append('folder', 'thumbnails');
+  
+  // Add tag to identify as thumbnail
+  formData.append('tags', 'thumbnail');
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable && onProgress) {
+        const progress = Math.round((e.loaded / e.total) * 100);
+        onProgress(progress);
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          resolve({
+            publicId: response.public_id,
+            secureUrl: response.secure_url,
+            width: response.width,
+            height: response.height,
+            duration: response.duration,
+            format: response.format,
+            bytes: response.bytes,
+          });
+        } catch (error) {
+          reject(new Error('Failed to parse Cloudinary response'));
+        }
+      } else {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          const errorMessage = response.error?.message || response.message || 'Thumbnail upload failed';
+          reject(new Error(errorMessage));
+        } catch {
+          reject(new Error(`Thumbnail upload failed with status ${xhr.status}`));
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during thumbnail upload'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Thumbnail upload aborted'));
+    });
+
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`);
+    xhr.send(formData);
+  });
+}
+
+/**
  * Upload file to Cloudinary with progress tracking
  * Automatically uses chunked upload for files >100MB
  */

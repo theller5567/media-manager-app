@@ -7,6 +7,7 @@ export interface FilePreview {
   extension: string;
   size: number;
   type: 'image' | 'video' | 'document' | 'audio' | 'other';
+  thumbnailFile?: File; // Thumbnail File object for video files (for upload)
 }
 
 export interface CommonFields {

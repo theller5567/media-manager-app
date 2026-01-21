@@ -61,3 +61,63 @@ export const listUsers = query({
     return [];
   },
 });
+
+/**
+ * Get user preferences (gradient, etc.)
+ */
+export const getUserPreferences = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUserHelper(ctx);
+    if (!user) {
+      return null;
+    }
+    
+    const userId = user._id.toString();
+    const preferences = await ctx.db
+      .query("userPreferences")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    
+    return preferences;
+  },
+});
+
+/**
+ * Get user statistics (upload count, etc.)
+ */
+export const getUserStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUserHelper(ctx);
+    if (!user) {
+      return {
+        uploadCount: 0,
+        totalFileSize: 0,
+        mediaByType: {},
+      };
+    }
+    
+    // Get all media uploaded by this user
+    const userMedia = await ctx.db
+      .query("media")
+      .withIndex("by_uploadedBy", (q) => q.eq("uploadedBy", user._id.toString()))
+      .collect();
+    
+    // Calculate statistics
+    const uploadCount = userMedia.length;
+    const totalFileSize = userMedia.reduce((sum, item) => sum + (item.fileSize || 0), 0);
+    
+    // Count media by type
+    const mediaByType: Record<string, number> = {};
+    userMedia.forEach((item) => {
+      mediaByType[item.mediaType] = (mediaByType[item.mediaType] || 0) + 1;
+    });
+    
+    return {
+      uploadCount,
+      totalFileSize,
+      mediaByType,
+    };
+  },
+});

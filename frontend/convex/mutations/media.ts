@@ -82,6 +82,7 @@ export const update = mutation({
       relatedFiles: v.optional(v.array(v.string())),
       customMetadata: v.optional(v.any()),
       dateModified: v.optional(v.number()),
+      thumbnail: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
@@ -113,6 +114,7 @@ export const update = mutation({
     if (updates.relatedFiles !== undefined) patch.relatedFiles = updates.relatedFiles;
     if (updates.customMetadata !== undefined) patch.customMetadata = updates.customMetadata;
     if (updates.dateModified !== undefined) patch.dateModified = updates.dateModified;
+    if (updates.thumbnail !== undefined) patch.thumbnail = updates.thumbnail;
     
     await ctx.db.patch(id, patch);
     return await ctx.db.get(id);
