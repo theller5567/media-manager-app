@@ -71,7 +71,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
       {/* Color Preview and Input */}
       <div className="flex items-center gap-3">
         <div
-          className="h-10 w-10 rounded-md border-2 border-slate-600 flex-shrink-0"
+          className="h-10 w-10 rounded-md border-2 border-slate-600 shrink-0"
           style={{ backgroundColor: isValid && value ? value : '#000000' }}
           title={value || 'No color selected'}
         />

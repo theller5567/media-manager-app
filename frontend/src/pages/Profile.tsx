@@ -6,6 +6,7 @@ import {
   Calendar,
   Mail,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "convex/react";
@@ -25,10 +26,18 @@ import type { User } from "@/lib/rbac";
 import Avatar from "@/components/ui/Avatar";
 
 const Profile = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser, changePassword } = useAuth();
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showGradientPicker, setShowGradientPicker] = useState(false);
   const [gradient, setGradient] = useState<string>(gradientClasses.Dusk);
+  
+  // Form state for controlled inputs
+  const [name, setName] = useState<string>("");
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [currentPassword, setCurrentPassword] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   // Fetch user statistics and preferences
   const userStats = useQuery(api.queries.users.getUserStats);
@@ -44,6 +53,17 @@ const Profile = () => {
     }
   }, [userPreferences?.gradient]);
 
+  // Initialize form fields when user data or edit mode changes
+  useEffect(() => {
+    if (showEditProfile && currentUser) {
+      setName(currentUser.name || "");
+      setNewPassword("");
+      setConfirmPassword("");
+      setCurrentPassword("");
+      setErrorMessage("");
+    }
+  }, [showEditProfile, currentUser]);
+
   // Format date helper
   const formatDate = (date: Date | undefined) => {
     if (!date) return "N/A";
@@ -54,14 +74,14 @@ const Profile = () => {
     });
   };
 
+  console.log(Object.keys(gradientClasses));
+
   const gradientPicker = (): ReactNode => {
     return (
       <div className="flex flex-wrap gap-3 p-4 max-h-96 overflow-y-auto">
         {Object.keys(gradientClasses).map((grad: string) => {
-          const gradientClass =
-            gradientClasses[grad as keyof typeof gradientClasses];
-          const isSelected =
-            gradient === gradientClasses[grad as keyof typeof gradientClasses];
+          const gradientClass = gradientClasses[grad as keyof typeof gradientClasses];
+          const isSelected = gradient === gradientClasses[grad as keyof typeof gradientClasses];
           return (
             <button
               key={grad}
@@ -96,16 +116,77 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
-    if (currentUser) {
-      try {
-        await updateProfileMutation({
-          gradient: gradient,
-        });
-        setShowEditProfile(false);
-      } catch (error) {
-        console.error("Failed to update profile:", error);
-        // TODO: Show error toast/notification to user
+    if (!currentUser) return;
+
+    setIsSaving(true);
+    setErrorMessage("");
+    const errors: string[] = [];
+
+    try {
+      // 1. Validate password fields if password is being changed
+      if (newPassword) {
+        if (!currentPassword) {
+          errors.push("Current password is required to change your password");
+        } else if (newPassword !== confirmPassword) {
+          errors.push("New passwords do not match");
+        } else if (newPassword.length < 8) {
+          errors.push("Password must be at least 8 characters long");
+        }
       }
+
+      // If validation errors, stop here
+      if (errors.length > 0) {
+        setErrorMessage(errors.join(". "));
+        setIsSaving(false);
+        return;
+      }
+
+      // 2. Update BetterAuth fields if changed
+      if (name !== currentUser.name) {
+        try {
+          await updateUser({ name });
+        } catch (error: any) {
+          errors.push(`Failed to update name: ${error.message || "Unknown error"}`);
+        }
+      }
+
+      // 3. Update password if provided
+      if (newPassword && currentPassword) {
+        try {
+          await changePassword({
+            currentPassword,
+            newPassword,
+            revokeOtherSessions: false,
+          });
+          // Clear password fields on success
+          setNewPassword("");
+          setConfirmPassword("");
+          setCurrentPassword("");
+        } catch (error: any) {
+          errors.push(`Failed to change password: ${error.message || "Invalid current password"}`);
+        }
+      }
+
+      // 4. Update Convex preferences if gradient changed
+      if (gradient !== userPreferences?.gradient) {
+        try {
+          await updateProfileMutation({ gradient });
+        } catch (error: any) {
+          errors.push(`Failed to update gradient: ${error.message || "Unknown error"}`);
+        }
+      }
+
+      // 5. Success - close form if no errors
+      if (errors.length === 0) {
+        setShowEditProfile(false);
+      } else {
+        setErrorMessage(errors.join(". "));
+      }
+    } catch (error: any) {
+      console.error("Failed to update profile:", error);
+      setErrorMessage(error.message || "Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -315,15 +396,24 @@ const Profile = () => {
 
               {/* Form Fields */}
               <div className="space-y-4">
+                {/* Error Message Display */}
+                {errorMessage && (
+                  <div className="bg-red-500/10 border border-red-500/50 rounded-sm p-3">
+                    <p className="text-sm text-red-400">{errorMessage}</p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Name
                   </label>
                   <input
                     type="text"
-                    defaultValue={currentUser?.name || ""}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    disabled={isSaving}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -333,7 +423,7 @@ const Profile = () => {
                   </label>
                   <input
                     type="email"
-                    defaultValue={currentUser?.email || ""}
+                    value={currentUser?.email || ""}
                     placeholder="Enter your email"
                     disabled
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-sm text-slate-400 cursor-not-allowed"
@@ -345,12 +435,32 @@ const Profile = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password (required if changing password)"
+                    disabled={isSaving}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Required if you want to change your password
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     New Password
                   </label>
                   <input
                     type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password (leave blank to keep current)"
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    disabled={isSaving}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <p className="text-xs text-slate-500 mt-1">
                     Leave blank if you don't want to change your password
@@ -363,8 +473,11 @@ const Profile = () => {
                   </label>
                   <input
                     type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    disabled={isSaving}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -374,16 +487,19 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => setShowEditProfile(false)}
-                  className="px-6 py-2 bg-slate-700 text-white rounded-sm hover:bg-slate-600 transition-colors cursor-pointer border border-slate-600"
+                  disabled={isSaving}
+                  className="px-6 py-2 bg-slate-700 text-white rounded-sm hover:bg-slate-600 transition-colors cursor-pointer border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   type="button"
-                  className="px-6 py-2 bg-cyan-500 text-white rounded-sm hover:bg-cyan-600 transition-colors cursor-pointer"
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-sm hover:bg-cyan-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>

@@ -181,6 +181,7 @@ const MediaDetail = () => {
                           src={media.cloudinarySecureUrl}
                           width="100%"
                           height="100%"
+                          light={media.thumbnail}
                           className="rounded"
                           controls
                         />
