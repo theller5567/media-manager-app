@@ -86,6 +86,9 @@ const MediaDetail = () => {
     );
   }
 
+    const uploadedByUser = useQuery(api.queries.users.getUserById, { userId: mediaDoc?.uploadedBy as string }) || null;
+  
+
   const handleDelete = async () => {
     if (
       !confirm(
@@ -110,20 +113,11 @@ const MediaDetail = () => {
     <>
       <div className="relative flex flex-col gap-4 h-full flex-1 min-h-0">
         <Header title="Media Detail" description="View and manage media details" >
-          <button
-            onClick={() => navigate("/library")}
-            className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-sm hover:bg-cyan-600 transition-colors cursor-pointer">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Library
-          </button>
-        </Header>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-4 bg-slate-800 rounded-lg p-4 col-span-2">
-            {(canEdit || canDelete) && (
+        {(canEdit || canDelete) && (
               <div className="flex justify-end gap-2">
                 {canEdit && media.mediaType === "video" && (
                   <button
-                    className="cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                    className="bg-slate-700 cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
                     onClick={() => setThumbnailDialogOpen(true)}
                   >
                     <ImageIcon className="h-4 w-4" />
@@ -132,7 +126,7 @@ const MediaDetail = () => {
                 )}
                 {canEdit && (
                   <button
-                    className="cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                    className="bg-slate-700 cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
                     onClick={() => setEditDialogOpen(true)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -141,7 +135,7 @@ const MediaDetail = () => {
                 )}
                 {canDelete && (
                   <button
-                    className="cursor-pointer text-white hover:text-red-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                    className="bg-slate-700 cursor-pointer text-white hover:text-red-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
                     onClick={handleDelete}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -150,6 +144,10 @@ const MediaDetail = () => {
                 )}
               </div>
             )}
+        </Header>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-4 bg-slate-800 rounded-lg p-4 col-span-2">
+            
             <div>
               {media.mediaType === "image" ? (
                 <LazyImage
@@ -195,14 +193,14 @@ const MediaDetail = () => {
 
           <div className="space-y-6 bg-slate-800 rounded-lg">
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-white">Details</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">Details</h2>
               <div className="space-y-3">
                 {media.uploadedBy && (
                   <div>
                     <label className="text-sm font-medium text-slate-400">
                       Uploaded By
                     </label>
-                    <p className="text-white">{media.uploadedBy}</p>
+                    <p className="text-white">{uploadedByUser?.name}</p>
                   </div>
                 )}
 

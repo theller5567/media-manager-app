@@ -65,3 +65,4 @@ export const updateRole = mutation({
     return { success: true, userId: args.userId, role: args.role };
   },
 });
+
