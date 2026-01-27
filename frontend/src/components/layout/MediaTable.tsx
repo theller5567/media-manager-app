@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useReactTable, getCoreRowModel, type ColumnDef, flexRender } from "@tanstack/react-table";
@@ -19,10 +19,17 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import type { MediaType } from "@/types/mediaType";
 import { useAuth } from "@/hooks/useAuth";
+import { DownloadIcon } from "lucide-react";
+import DownloadDialog from "@/components/media/DownloadDialog";
+import { downloadMultipleFiles } from "@/lib/downloadUtils";
 
 const MediaTable: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   
   // Check if filtering by "My Uploads"
   const filterMyUploads = searchParams.get("filter") === "my-uploads";
@@ -60,11 +67,90 @@ const MediaTable: React.FC = () => {
       ...item,
       id: item._id,
       dateModified: new Date(item.dateModified),
+      cloudinaryPublicId: item.cloudinaryPublicId,
+      cloudinarySecureUrl: item.cloudinarySecureUrl,
     }));
   }, [mediaData]);
 
+  // Handle single file download
+  const handleDownloadClick = (media: MediaItem) => {
+    setSelectedMedia(media);
+    setDownloadDialogOpen(true);
+  };
+
+  // Handle bulk download
+  const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
+
+    setIsBulkDownloading(true);
+    try {
+      const filesToDownload = mediaItems
+        .filter((item) => selectedIds.has(item.id))
+        .map((item) => ({
+          url: item.cloudinarySecureUrl,
+          filename: item.filename,
+        }));
+
+      await downloadMultipleFiles(filesToDownload);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error("Bulk download failed:", error);
+      alert("Failed to download some files. Please try again.");
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Use paginated media hook for table mode (infinite scroll)
+  const { data, isLoading, hasMore, loadMore } = usePaginatedMedia({
+    allData: mediaItems,
+    mode: 'table',
+  });
+
+  // Toggle select all
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === data.length && data.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((item) => item.id)));
+    }
+  }, [selectedIds.size, data]);
+
   // Define columns with uploader column
   const columns: ColumnDef<MediaItem>[] = useMemo(() => [
+    {
+      id: "select",
+      header: () => (
+        <input
+          type="checkbox"
+          checked={selectedIds.size === data.length && data.length > 0}
+          onChange={toggleSelectAll}
+          className="rounded border-slate-600"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(row.original.id)}
+          onChange={() => toggleSelection(row.original.id)}
+          className="rounded border-slate-600"
+        />
+      ),
+      size: 50,
+    },
     {
       accessorKey: "thumbnail",
       header: "Thumbnail",
@@ -224,13 +310,27 @@ const MediaTable: React.FC = () => {
         );
       },
     },
-  ], []);
-
-  // Use paginated media hook for table mode (infinite scroll)
-  const { data, isLoading, hasMore, loadMore } = usePaginatedMedia({
-    allData: mediaItems,
-    mode: 'table',
-  });
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            {currentUser && (
+              <button
+                onClick={() => handleDownloadClick(item)}
+                className="p-1.5 text-slate-400 hover:text-cyan-500 transition-colors rounded"
+                title="Download"
+              >
+                <DownloadIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [selectedIds, data, currentUser, toggleSelectAll]);
 
   const table = useReactTable({
     data,
@@ -280,6 +380,22 @@ const MediaTable: React.FC = () => {
 
   return (
     <div className="rounded-md border border-slate-700 overflow-hidden flex flex-col h-full">
+      {/* Bulk download toolbar */}
+      {currentUser && selectedIds.size > 0 && (
+        <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+          <span className="text-sm text-slate-300">
+            {selectedIds.size} file{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <button
+            onClick={handleBulkDownload}
+            disabled={isBulkDownloading}
+            className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-md hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          >
+            <DownloadIcon className="h-4 w-4" />
+            {isBulkDownloading ? "Downloading..." : `Download ${selectedIds.size} File${selectedIds.size !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
       <div
         ref={parentRef}
         className="flex-1 min-h-0 overflow-auto relative"
@@ -378,6 +494,26 @@ const MediaTable: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+      {currentUser && selectedMedia && (
+        <DownloadDialog
+          open={downloadDialogOpen}
+          onOpenChange={(open) => {
+            setDownloadDialogOpen(open);
+            if (!open) {
+              setSelectedMedia(null);
+            }
+          }}
+          media={
+            selectedMedia as MediaItem & {
+              cloudinaryPublicId: string;
+              cloudinarySecureUrl: string;
+              width?: number;
+              height?: number;
+              format?: string;
+            }
+          }
+        />
+      )}
     </div>
   );
 };

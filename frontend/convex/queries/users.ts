@@ -108,16 +108,28 @@ export const getUserStats = query({
     const uploadCount = userMedia.length;
     const totalFileSize = userMedia.reduce((sum, item) => sum + (item.fileSize || 0), 0);
     
-    // Count media by type
+    // Total storage limit (e.g., 1GB)
+    const storageLimit = 1024 * 1024 * 1024; // 1GB in bytes
+    
+    // Count media by type and calculate storage by type
     const mediaByType: Record<string, number> = {};
+    const storageByType: Record<string, number> = {};
+    
     userMedia.forEach((item) => {
+      // Count by type
       mediaByType[item.mediaType] = (mediaByType[item.mediaType] || 0) + 1;
+      
+      // Storage by type
+      storageByType[item.mediaType] = (storageByType[item.mediaType] || 0) + (item.fileSize || 0);
     });
     
     return {
       uploadCount,
       totalFileSize,
+      storageLimit,
+      remainingStorage: Math.max(0, storageLimit - totalFileSize),
       mediaByType,
+      storageByType,
     };
   },
 });

@@ -2,12 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { ArrowLeft, Loader2, Pencil, Trash2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, ImageIcon, DownloadIcon } from "lucide-react";
 import LazyImage from "@/components/ui/LazyImage";
 import { formatFileSize, type MediaItem } from "@/lib/mediaUtils";
 import { useState } from "react";
 import MediaEditDialog from "@/components/media/MediaEditDialog";
 import ThumbnailChangeDialog from "@/components/media/ThumbnailChangeDialog";
+import DownloadDialog from "@/components/media/DownloadDialog";
 import ReactPlayer from "react-player";
 import { useAuth } from "@/hooks/useAuth";
 import { canEditMedia, canDeleteMedia } from "@/lib/rbac";
@@ -19,6 +20,7 @@ const MediaDetail = () => {
   const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const { currentUser } = useAuth();
 
   const mediaDoc = useQuery(
@@ -28,6 +30,16 @@ const MediaDetail = () => {
 
   const deleteMediaMutation = useMutation(api.mutations.media.deleteMedia);
 
+  // Check if current user is admin (server-side check includes email-based admin)
+  // This must be called before early returns to follow Rules of Hooks
+  const userIsAdmin = useQuery(api.queries.users.checkIsAdmin);
+
+  // Query for uploadedByUser - must be called before early returns to follow Rules of Hooks
+  const uploadedByUser = useQuery(
+    api.queries.users.getUserById,
+    mediaDoc?.uploadedBy ? { userId: mediaDoc.uploadedBy } : "skip"
+  );
+
   // Convert Convex document to MediaItem format
   const media = mediaDoc
     ? {
@@ -35,6 +47,7 @@ const MediaDetail = () => {
         filename: mediaDoc.filename,
         thumbnail: mediaDoc.thumbnail,
         cloudinarySecureUrl: mediaDoc.cloudinarySecureUrl,
+        cloudinaryPublicId: mediaDoc.cloudinaryPublicId,
         mediaType: mediaDoc.mediaType,
         customMediaTypeId: mediaDoc.customMediaTypeId,
         title: mediaDoc.title,
@@ -55,12 +68,14 @@ const MediaDetail = () => {
     : null;
 
   // Check permissions
-  // Cast currentUser to User type since BetterAuth returns Date objects for timestamps
-  const canEdit = media
-    ? canEditMedia(currentUser as User | null, media as any)
+  // Use server-side admin check (includes email-based admin) combined with ownership check
+  // If user is admin (via server check), they can edit/delete any media
+  // Otherwise, use the client-side RBAC check (which checks ownership)
+  const canEdit = media && currentUser
+    ? (userIsAdmin === true || canEditMedia(currentUser as User | null, media as any))
     : false;
-  const canDelete = media
-    ? canDeleteMedia(currentUser as User | null, media as any)
+  const canDelete = media && currentUser
+    ? (userIsAdmin === true || canDeleteMedia(currentUser as User | null, media as any))
     : false;
 
   if (mediaDoc === undefined) {
@@ -85,8 +100,6 @@ const MediaDetail = () => {
       </div>
     );
   }
-
-    const uploadedByUser = useQuery(api.queries.users.getUserById, { userId: mediaDoc?.uploadedBy as string }) || null;
   
 
   const handleDelete = async () => {
@@ -109,12 +122,26 @@ const MediaDetail = () => {
     }
   };
 
+  const handleDownload = () => {
+    setDownloadDialogOpen(true);
+  };
+
   return (
     <>
       <div className="relative flex flex-col gap-4 h-full flex-1 min-h-0">
         <Header title="Media Detail" description="View and manage media details" >
-        {(canEdit || canDelete) && (
               <div className="flex justify-end gap-2">
+                  {currentUser && (
+                    <button
+                      className="bg-slate-700 cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
+                      onClick={handleDownload}
+                    >
+                      <DownloadIcon className="h-4 w-4" />
+                      <span>Download</span>
+                    </button>
+                  )}
+                {(canEdit || canDelete) && (
+                  <>
                 {canEdit && media.mediaType === "video" && (
                   <button
                     className="bg-slate-700 cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
@@ -142,8 +169,9 @@ const MediaDetail = () => {
                     <span>Delete</span>
                   </button>
                 )}
+                  </>
+                )}
               </div>
-            )}
         </Header>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-4 bg-slate-800 rounded-lg p-4 col-span-2">
@@ -297,6 +325,21 @@ const MediaDetail = () => {
           </div>
         </div>
       </div>
+      {currentUser && media && (
+        <DownloadDialog
+          open={downloadDialogOpen}
+          onOpenChange={setDownloadDialogOpen}
+          media={
+            media as MediaItem & {
+              cloudinaryPublicId: string;
+              cloudinarySecureUrl: string;
+              width?: number;
+              height?: number;
+              format?: string;
+            }
+          }
+        />
+      )}
       {canEdit && (
         <>
           <MediaEditDialog

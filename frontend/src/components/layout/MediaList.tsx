@@ -3,22 +3,29 @@ import { api } from "../../../convex/_generated/api";
 import MediaTable from "./MediaTable";
 import { useViewMode, useSearchQuery } from "@/store/uiStore";
 import { usePaginatedMedia } from "@/hooks/usePaginatedMedia";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, DownloadIcon } from "lucide-react";
 import ViewToggle from "../ui/ViewToggle";
 import Pagination from "../ui/Pagination";
 import LazyImage from "../ui/LazyImage";
 import LoadingSkeleton from "../ui/LoadingSkeleton";
 import MediaFilters from "../ui/MediaFilters";
 import { getAvailableTags } from "@/lib/filteringUtils";
-import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import DownloadDialog from "@/components/media/DownloadDialog";
+import { downloadMultipleFiles } from "@/lib/downloadUtils";
+import type { MediaItem } from "@/lib/mediaUtils";
 
 const MediaList = () => {
   const { viewMode } = useViewMode();
   const { searchQuery, setSearchQuery } = useSearchQuery();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useAuth();
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   
   // Check if filtering by "My Uploads"
   const filterMyUploads = searchParams.get("filter") === "my-uploads";
@@ -40,8 +47,61 @@ const MediaList = () => {
       id: item._id,
       uploadedBy: item.uploadedBy,
       dateModified: new Date(item.dateModified),
+      cloudinaryPublicId: item.cloudinaryPublicId,
+      cloudinarySecureUrl: item.cloudinarySecureUrl,
     }));
   }, [mediaData]);
+
+  // Handle single file download
+  const handleDownloadClick = (media: MediaItem) => {
+    setSelectedMedia(media);
+    setDownloadDialogOpen(true);
+  };
+
+  // Handle bulk download
+  const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
+
+    setIsBulkDownloading(true);
+    try {
+      const filesToDownload = mediaItems
+        .filter((item) => selectedIds.has(item.id))
+        .map((item) => ({
+          url: item.cloudinarySecureUrl,
+          filename: item.filename,
+        }));
+
+      await downloadMultipleFiles(filesToDownload);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error("Bulk download failed:", error);
+      alert("Failed to download some files. Please try again.");
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle select all
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedData.length && paginatedData.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedData.map((item) => item.id)));
+    }
+  };
 
   // Extract available tags from Convex data
   const availableTags = getAvailableTags(mediaItems);
@@ -114,6 +174,34 @@ const MediaList = () => {
         </div>
       </div>
 
+      {/* Bulk download toolbar */}
+      {currentUser && viewMode === "grid" && selectedIds.size > 0 && (
+        <div className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-md mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === paginatedData.length && paginatedData.length > 0}
+                onChange={toggleSelectAll}
+                className="rounded border-slate-600"
+              />
+              Select All
+            </label>
+            <span className="text-sm text-slate-300">
+              {selectedIds.size} file{selectedIds.size !== 1 ? "s" : ""} selected
+            </span>
+          </div>
+          <button
+            onClick={handleBulkDownload}
+            disabled={isBulkDownloading}
+            className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-md hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          >
+            <DownloadIcon className="h-4 w-4" />
+            {isBulkDownloading ? "Downloading..." : `Download ${selectedIds.size} File${selectedIds.size !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
+
       {/* View Content - flex-1 to fill space, pb-10 ensures 40px from bottom */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {viewMode === "grid" ? (
@@ -128,10 +216,44 @@ const MediaList = () => {
                 <div className="flex-1 min-h-0 overflow-y-auto pb-10">
                   <div className="grid mb-6 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-6">
                     {paginatedData.map((item) => (
-                      <div
+                      <Link
                         key={item.id}
-                        className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden group relative"
+                        to={`/media/${item.id}`}
+                        className="aspect-video rounded-lg bg-slate-700 border border-slate-600 shadow-sm overflow-hidden group relative block"
                       >
+                        {/* Selection checkbox */}
+                        {currentUser && (
+                          <div className="absolute top-2 left-2 z-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(item.id)}
+                              onChange={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleSelection(item.id);
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              className="rounded border-slate-600 bg-slate-800"
+                            />
+                          </div>
+                        )}
+                        {/* Download button */}
+                        {currentUser && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDownloadClick(item);
+                            }}
+                            className="absolute top-2 right-2 z-10 p-1.5 bg-slate-800/90 text-slate-400 hover:text-cyan-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Download"
+                          >
+                            <DownloadIcon className="h-4 w-4" />
+                          </button>
+                        )}
                         <LazyImage
                           src={item.thumbnail || ''}
                           alt={item.altText || item.filename}
@@ -147,7 +269,7 @@ const MediaList = () => {
                             Uploaded by: {item.uploadedBy}
                           </div>
                         )} */}
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -184,6 +306,26 @@ const MediaList = () => {
           </div>
         )}
       </div>
+      {currentUser && selectedMedia && (
+        <DownloadDialog
+          open={downloadDialogOpen}
+          onOpenChange={(open) => {
+            setDownloadDialogOpen(open);
+            if (!open) {
+              setSelectedMedia(null);
+            }
+          }}
+          media={
+            selectedMedia as MediaItem & {
+              cloudinaryPublicId: string;
+              cloudinarySecureUrl: string;
+              width?: number;
+              height?: number;
+              format?: string;
+            }
+          }
+        />
+      )}
     </div>
   )
 }

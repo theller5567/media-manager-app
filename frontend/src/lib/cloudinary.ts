@@ -434,5 +434,239 @@ export function generateVideoThumbnailUrl(publicId: string, options?: { width?: 
   return `https://res.cloudinary.com/${cloudinaryConfig.cloudName}/video/upload/w_${width},h_${height},c_${crop}/${publicId}.jpg`;
 }
 
+/**
+ * Image transformation options for Cloudinary
+ */
+export interface ImageTransformationOptions {
+  width?: number;
+  height?: number;
+  crop?: 'fill' | 'fit' | 'scale' | 'thumb' | 'limit';
+  format?: 'jpg' | 'png' | 'webp' | 'avif' | 'gif';
+  quality?: 'auto' | number; // 1-100 or 'auto'
+  removeBackground?: boolean; // Requires Cloudinary AI addon
+  gravity?: 'auto' | 'face' | 'center' | 'north' | 'south' | 'east' | 'west';
+  radius?: number; // Border radius
+  effect?: string; // e.g., 'blur:300', 'sharpen', 'vignette'
+}
+
+/**
+ * Video transformation options for Cloudinary
+ */
+export interface VideoTransformationOptions {
+  width?: number;
+  height?: number;
+  format?: 'mp4' | 'webm' | 'mov';
+  quality?: 'auto' | number;
+  bitRate?: number; // Video bitrate
+  fps?: number; // Frames per second
+  startOffset?: number; // Start time in seconds
+  duration?: number; // Duration in seconds
+}
+
+/**
+ * Extract public ID from Cloudinary URL
+ */
+export function extractPublicIdFromUrl(url: string): string | null {
+  try {
+    // Cloudinary URL format: https://res.cloudinary.com/{cloudName}/{resourceType}/upload/{publicId}.{format}
+    // or: https://res.cloudinary.com/{cloudName}/{resourceType}/upload/{transformations}/{publicId}.{format}
+    const match = url.match(/\/upload\/(?:[^\/]+\/)?([^\/]+?)(?:\.[^.]+)?$/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to extract public ID from URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Build Cloudinary transformation URL for images
+ */
+export function buildImageTransformationUrl(
+  publicId: string,
+  options: ImageTransformationOptions
+): string {
+  if (!cloudinaryConfig) {
+    configureCloudinary();
+  }
+
+  if (!cloudinaryConfig) {
+    throw new Error('Cloudinary not configured. Please set environment variables.');
+  }
+
+  // If publicId is a full Cloudinary URL, extract just the public ID
+  let cleanPublicId = publicId;
+  if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
+    const extracted = extractPublicIdFromUrl(publicId);
+    if (extracted) {
+      cleanPublicId = extracted;
+    }
+  }
+
+  // Strip file extension from public ID if present
+  // Cloudinary public IDs should not include extensions in transformation URLs
+  // Public IDs can include folder paths (e.g., "folder/subfolder/image")
+  // Note: Do NOT URL-encode the public ID as Cloudinary handles path segments directly
+  cleanPublicId = cleanPublicId.replace(/\.[^/.]+$/, '');
+
+  const transformations: string[] = [];
+
+  // Size transformations
+  if (options.width) {
+    transformations.push(`w_${options.width}`);
+  }
+  if (options.height) {
+    transformations.push(`h_${options.height}`);
+  }
+  if (options.crop) {
+    transformations.push(`c_${options.crop}`);
+  }
+  if (options.gravity) {
+    transformations.push(`g_${options.gravity}`);
+  }
+
+  // Format - specify in transformation string
+  // Cloudinary accepts both 'jpg' and 'jpeg', normalize 'jpg' to 'jpeg' for the f_ parameter
+  if (options.format) {
+    const cloudinaryFormat = options.format === 'jpg' ? 'jpeg' : options.format;
+    transformations.push(`f_${cloudinaryFormat}`);
+  }
+
+  // Quality
+  if (options.quality) {
+    if (options.quality === 'auto') {
+      transformations.push('q_auto');
+    } else if (typeof options.quality === 'number') {
+      transformations.push(`q_${Math.max(1, Math.min(100, options.quality))}`);
+    }
+  }
+
+  // Effects
+  if (options.effect) {
+    transformations.push(`e_${options.effect}`);
+  }
+
+  // Background removal (requires Cloudinary AI addon)
+  if (options.removeBackground) {
+    transformations.push('e_background_removal');
+  }
+
+  // Border radius
+  if (options.radius) {
+    transformations.push(`r_${options.radius}`);
+  }
+
+  // Build transformation string according to Cloudinary URL format:
+  // https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{extension}
+  // Transformations are comma-separated and must end with a trailing slash if present
+  const transformationString = transformations.length > 0
+    ? `${transformations.join(',')}/`
+    : '';
+
+  // Format extension - optional when f_ format is specified, but adding it helps browser compatibility
+  // Cloudinary docs: "The file extension of the requested delivery format for the asset"
+  // Use .jpg extension for jpeg format (more standard browser extension)
+  const formatExtension = options.format 
+    ? `.${options.format === 'jpg' ? 'jpg' : options.format}` 
+    : '';
+
+  // Construct the final URL
+  // Public ID should be used as-is (no URL encoding needed for path segments)
+  return `https://res.cloudinary.com/${cloudinaryConfig.cloudName}/image/upload/${transformationString}${cleanPublicId}${formatExtension}`;
+}
+
+/**
+ * Build Cloudinary transformation URL for videos
+ */
+export function buildVideoTransformationUrl(
+  publicId: string,
+  options: VideoTransformationOptions
+): string {
+  if (!cloudinaryConfig) {
+    configureCloudinary();
+  }
+
+  if (!cloudinaryConfig) {
+    throw new Error('Cloudinary not configured. Please set environment variables.');
+  }
+
+  // If publicId is a full Cloudinary URL, extract just the public ID
+  let cleanPublicId = publicId;
+  if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
+    const extracted = extractPublicIdFromUrl(publicId);
+    if (extracted) {
+      cleanPublicId = extracted;
+    }
+  }
+
+  // Strip file extension from public ID if present
+  // Cloudinary public IDs should not include extensions in transformation URLs
+  // Public IDs can include folder paths (e.g., "folder/subfolder/video")
+  // Note: Do NOT URL-encode the public ID as Cloudinary handles path segments directly
+  cleanPublicId = cleanPublicId.replace(/\.[^/.]+$/, '');
+
+  const transformations: string[] = [];
+
+  // Size transformations
+  if (options.width) {
+    transformations.push(`w_${options.width}`);
+  }
+  if (options.height) {
+    transformations.push(`h_${options.height}`);
+  }
+
+  // Format - specify in transformation string
+  if (options.format) {
+    transformations.push(`f_${options.format}`);
+  }
+
+  // Quality
+  if (options.quality) {
+    if (options.quality === 'auto') {
+      transformations.push('q_auto');
+    } else if (typeof options.quality === 'number') {
+      transformations.push(`q_${Math.max(1, Math.min(100, options.quality))}`);
+    }
+  }
+
+  // Bitrate
+  if (options.bitRate) {
+    transformations.push(`br_${options.bitRate}`);
+  }
+
+  // FPS
+  if (options.fps) {
+    transformations.push(`fps_${options.fps}`);
+  }
+
+  // Start offset (for trimming)
+  if (options.startOffset !== undefined) {
+    transformations.push(`so_${options.startOffset}`);
+  }
+
+  // Duration
+  if (options.duration) {
+    transformations.push(`du_${options.duration}`);
+  }
+
+  // Build transformation string according to Cloudinary URL format:
+  // https://res.cloudinary.com/{cloud_name}/video/upload/{transformations}/{public_id}.{extension}
+  // Transformations are comma-separated and must end with a trailing slash if present
+  const transformationString = transformations.length > 0
+    ? `${transformations.join(',')}/`
+    : '';
+
+  // Format extension - optional when f_ format is specified, but adding it helps browser compatibility
+  // Cloudinary docs: "The file extension of the requested delivery format for the asset"
+  // Use .mp4 extension for mp4 format (standard video extension)
+  const formatExtension = options.format ? `.${options.format}` : '';
+
+  // Construct the final URL
+  // Public ID should be used as-is (no URL encoding needed for path segments)
+  return `https://res.cloudinary.com/${cloudinaryConfig.cloudName}/video/upload/${transformationString}${cleanPublicId}${formatExtension}`;
+}
+
 // Initialize on module load
 configureCloudinary();

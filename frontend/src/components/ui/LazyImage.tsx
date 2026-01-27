@@ -62,7 +62,12 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     setIsLoaded(true);
   };
 
-  const handleError = () => {
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error('Image load error:', {
+      src,
+      error: e,
+      mediaType,
+    });
     setHasError(true);
     setIsLoaded(false);
   };
@@ -120,10 +125,12 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       ) : (
         // Image with fade-in effect (only for image mediaType)
         <img
+          key={src}
           src={src}
           alt={alt}
           onLoad={handleLoad}
           onError={handleError}
+          loading="lazy"
           className={`w-full h-full object-cover transition-opacity duration-300 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}

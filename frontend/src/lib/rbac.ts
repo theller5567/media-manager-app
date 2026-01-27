@@ -1,4 +1,4 @@
-import type { Id } from "../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 // User type from BetterAuth (matches BetterAuth's actual return type)
 export type User = {
@@ -60,7 +60,7 @@ export function canEditMedia(user: User | null, media: Media): boolean {
   
   // User can only edit their own media
   if (!media.uploadedBy) return false;
-  return media.uploadedBy === (user.id as Id<"betterAuth:user">);
+  return media.uploadedBy === user.id;
 }
 
 /**

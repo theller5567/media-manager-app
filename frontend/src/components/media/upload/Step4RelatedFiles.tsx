@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Link2 } from 'lucide-react';
-import { mockMediaData } from '@/data/mockMediaData';
-import { filterMediaItems } from '@/lib/mediaUtils';
+import { filterMediaItems, type MediaItem } from '@/lib/mediaUtils';
 import { Badge } from '@/components/ui/Badge';
 import { twMerge } from 'tailwind-merge';
 import LazyImage from '@/components/ui/LazyImage';
 import { getMediaTypeIcon } from '@/lib/mediaUtils';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
+
 
 interface Step4RelatedFilesProps {
   selectedRelatedFiles: string[];
@@ -21,9 +23,18 @@ export function Step4RelatedFiles({
   const [searchQuery, setSearchQuery] = useState('');
   const [linkToAllFiles, setLinkToAllFiles] = useState(true);
 
+  const mediaData = useQuery(api.queries.media.list) || [];
+
+
   const availableFiles = useMemo(() => {
-    return mockMediaData.filter((file) => !excludeFileIds.includes(file.id));
-  }, [excludeFileIds]);
+    return mediaData
+      .filter((file) => !excludeFileIds.includes(file._id))
+      .map((file) => ({
+        ...file,
+        id: file._id,
+        dateModified: new Date(file._creationTime),
+      })) as unknown as MediaItem[];
+  }, [mediaData, excludeFileIds]);
 
   const filteredFiles = useMemo(() => {
     if (!searchQuery.trim()) {
