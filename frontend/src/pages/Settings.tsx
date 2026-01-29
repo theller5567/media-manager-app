@@ -140,7 +140,7 @@ const Settings = () => {
       />
       
       <div className="flex-1 min-h-0 flex-wrap pb-10">
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {sections.map((section, index) => (
             <div key={index} className="bg-slate-800 rounded-sm w-full flex flex-col gap-4 shrink-0">
               {/* Kanban Column Header */}

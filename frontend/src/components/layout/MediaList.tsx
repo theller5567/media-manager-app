@@ -135,42 +135,65 @@ const MediaList = () => {
   return (
     <div className="rounded-md bg-slate-800 p-2 flex flex-col flex-1 min-h-0">
       {/* Search Input */}
-      <div className="flex items-center justify-between pb-4">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              placeholder="Search media..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="pl-8 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            />
-          </div>
-          {isFiltering && (
-            <span className="text-sm text-slate-400 ml-4">
-              {totalCount} of {mediaItems.length} results
-            </span>
-          )}
-          {/* My Uploads Filter Toggle */}
-          {currentUser && (
-            <button
-              onClick={toggleMyUploads}
-              className={`
-                flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
-                ${filterMyUploads 
-                  ? "bg-cyan-600 text-white" 
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                }
-              `}
-            >
-              <Filter className="h-4 w-4" />
-              {filterMyUploads ? "All Media" : "My Uploads"}
-            </button>
-          )}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4">
+        {/* Search input - full width on mobile, constrained on desktop */}
+        <div className="relative w-full md:flex-1 md:max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            placeholder="Search media..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="pl-8 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <MediaFilters availableTags={availableTags} />
-          <ViewToggle />
+        
+        {/* Controls row - My Uploads and View Toggle on same row for mobile, full controls on desktop */}
+        <div className="flex items-center justify-between md:justify-end gap-2">
+          {/* Mobile: My Uploads and View Toggle only */}
+          <div className="flex items-center  gap-2 md:hidden w-full justify-between">
+            {currentUser && (
+              <button
+                onClick={toggleMyUploads}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                  ${filterMyUploads 
+                    ? "bg-cyan-600 text-white" 
+                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }
+                `}
+              >
+                <Filter className="h-4 w-4" />
+                {filterMyUploads ? "All Media" : "My Uploads"}
+              </button>
+            )}
+            <ViewToggle />
+          </div>
+          
+          {/* Desktop: Full controls with filters */}
+          <div className="hidden md:flex items-center gap-2">
+            {isFiltering && (
+              <span className="text-sm text-slate-400">
+                {totalCount} of {mediaItems.length} results
+              </span>
+            )}
+            {currentUser && (
+              <button
+                onClick={toggleMyUploads}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                  ${filterMyUploads 
+                    ? "bg-cyan-600 text-white" 
+                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }
+                `}
+              >
+                <Filter className="h-4 w-4" />
+                {filterMyUploads ? "All Media" : "My Uploads"}
+              </button>
+            )}
+            <MediaFilters availableTags={availableTags} />
+            <ViewToggle />
+          </div>
         </div>
       </div>
 

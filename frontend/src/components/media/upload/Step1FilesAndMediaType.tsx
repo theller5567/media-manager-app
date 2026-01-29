@@ -100,14 +100,24 @@ export function Step1FilesAndMediaType({
     <div className="space-y-6">
       
 
-      {/* Drag and Drop Zone */}
+      {/* Mobile Upload Button */}
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="md:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-medium rounded-lg transition-colors"
+      >
+        <Upload className="h-5 w-5" />
+        <span>Select Files</span>
+      </button>
+
+      {/* Drag and Drop Zone - Desktop Only */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={twMerge(
-          'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+          'hidden md:block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
           isDragging
             ? 'border-cyan-500 bg-cyan-500/10'
             : 'border-slate-600 hover:border-slate-500 bg-slate-800/50'

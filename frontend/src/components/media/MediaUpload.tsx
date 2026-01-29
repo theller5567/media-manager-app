@@ -82,9 +82,9 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
     const isValid = uploadState.validateStep(uploadState.step, false);
     setCanProceed(isValid);
     
-    // Update completed steps
+    // Update completed steps (include current step if valid)
     const newCompletedSteps = new Set<number>();
-    for (let i = 0; i < uploadState.step; i++) {
+    for (let i = 0; i <= uploadState.step; i++) {
       if (uploadState.validateStep(i, false)) {
         newCompletedSteps.add(i);
       }
@@ -279,18 +279,30 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-700">
-            <DialogTitle className="text-2xl text-white">Upload Media</DialogTitle>
-            <DialogDescription className="text-slate-400">
+        <DialogContent className="max-w-full h-full left-0 top-0 translate-x-0 translate-y-0 md:left-[50%] md:top-[50%] md:translate-x-[-50%] md:translate-y-[-50%] md:max-w-6xl md:max-h-[90vh] flex flex-col p-0 rounded-none md:rounded-lg">
+          <DialogHeader className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-slate-700">
+            <DialogTitle className="text-xl md:text-2xl text-white">Upload Media</DialogTitle>
+            <DialogDescription className="text-slate-400 text-sm md:text-base">
               Upload and organize your media files with metadata
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-1 min-h-0">
-            {/* Step Indicator Sidebar */}
+          {/* Mobile: Step indicator at top */}
+          <div className="md:hidden border-b border-slate-700 p-4">
+            <StepIndicator
+              variant="mobile"
+              steps={STEPS}
+              currentStep={uploadState.step}
+              completedSteps={completedSteps}
+              onStepClick={handleStepClick}
+            />
+          </div>
+
+          {/* Desktop: Sidebar with step indicator */}
+          <div className="hidden md:flex flex-1 min-h-0">
             <div className="w-64 shrink-0 border-r border-slate-700 p-6">
               <StepIndicator
+                variant="desktop"
                 steps={STEPS}
                 currentStep={uploadState.step}
                 completedSteps={completedSteps}
@@ -298,13 +310,13 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
               />
             </div>
 
-            {/* Main Content */}
+            {/* Desktop Main Content */}
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex-1 overflow-y-auto p-6">
                 {renderStepContent()}
               </div>
 
-              {/* Navigation Footer */}
+              {/* Desktop Navigation Footer */}
               <div className="border-t border-slate-700 p-6 flex items-center justify-between">
                 <button
                   type="button"
@@ -362,6 +374,70 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile: Full-width content */}
+          <div className="md:hidden flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto p-4">
+              {renderStepContent()}
+            </div>
+
+            {/* Mobile Navigation Footer - stacked buttons */}
+            <div className="border-t border-slate-700 p-4 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handlePrevious}
+                disabled={isFirstStep}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 px-4 py-3 rounded transition-colors min-h-[44px]',
+                  isFirstStep
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                    : 'bg-slate-700 text-white hover:bg-slate-600'
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+
+              {isLastStep ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={uploadState.uploading || !canProceed}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-2 px-6 py-3 rounded font-medium transition-colors min-h-[44px]',
+                    uploadState.uploading || !canProceed
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-cyan-500 text-white hover:bg-cyan-600'
+                  )}
+                >
+                  {uploadState.uploading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Submit Upload'
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!canProceed || uploadState.aiProcessing}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-2 px-6 py-3 rounded font-medium transition-colors min-h-[44px]',
+                    !canProceed || uploadState.aiProcessing
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-cyan-500 text-white hover:bg-cyan-600'
+                  )}
+                  title={uploadState.aiProcessing ? 'Please wait for AI analysis to complete' : undefined}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </DialogContent>

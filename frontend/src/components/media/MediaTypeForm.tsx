@@ -514,7 +514,7 @@ export function MediaTypeForm({
                         Configure Advanced
                       </button>
                     </DialogTrigger>
-                    <DialogContent className="min-w-fit max-w-md bg-slate-900 border-slate-700">
+                    <DialogContent className=" bg-slate-900 border-slate-700 md:max-w-fit">
                       <DialogHeader>
                         <DialogTitle>Advanced Dimension Controls</DialogTitle>
                         <DialogDescription>
@@ -912,10 +912,21 @@ export function MediaTypeForm({
         </div>
       )}
 
+      {/* Mobile Step Indicator - Top */}
+      <div className="md:hidden mb-6">
+        <StepIndicator
+          steps={STEPS}
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepClick={handleStepClick}
+          variant="mobile"
+        />
+      </div>
+
       {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Step Indicator Sidebar */}
-        <div className="lg:col-span-1">
+        {/* Step Indicator Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1">
           <div className="sticky top-4">
             <StepIndicator
               steps={STEPS}
@@ -932,7 +943,7 @@ export function MediaTypeForm({
         </div>
 
         {/* Live Preview Sidebar */}
-        {currentStep !== 4 && <div className="lg:col-span-1">
+        {currentStep !== 4 && <div className="hidden lg:block lg:col-span-1">
           <div className="sticky top-4">
             <div className="p-4 rounded-md bg-slate-800 border border-slate-700">
               <div className="flex items-center justify-between mb-4">
@@ -1048,7 +1059,7 @@ export function MediaTypeForm({
       </div>
 
       {/* Form Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-700">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-0 pt-4 border-t border-slate-700">
         <button
           type="button"
           onClick={(e) => {
@@ -1057,17 +1068,17 @@ export function MediaTypeForm({
             handlePrevious(e);
           }}
           disabled={currentStep === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-slate-600 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 min-h-[44px] rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-slate-600 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-row items-stretch md:items-center gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-slate-600 hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 min-h-[44px] flex-1/2 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-slate-600 hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
@@ -1079,7 +1090,7 @@ export function MediaTypeForm({
                 e.stopPropagation();
                 handleNext(e);
               }}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 min-h-[44px] flex-1/2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
             >
               Next
               <ChevronRight className="h-4 w-4" />
@@ -1092,7 +1103,7 @@ export function MediaTypeForm({
                 e.stopPropagation();
                 handleSubmit(e);
               }}
-              className="px-4 py-2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
+              className="px-4 py-2 min-h-[44px] text-nowrap flex-1/2 rounded-md bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition-colors"
             >
               {mediaType ? 'Update MediaType' : 'Create MediaType'}
             </button>

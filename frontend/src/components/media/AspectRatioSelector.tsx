@@ -154,8 +154,8 @@ const AspectRatioSelector = ({
 
                 {useSizeConstraints && (
                     <>
-                    <div className="relative flex items-center gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="relative flex flex-col md:flex-row items-center gap-0 md:gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex mt-2 md:flex-col md:mt-0 gap-1.5 flex-1 ">
                             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Minimum Width (px)</label>
                             <input 
                                 type="number" 
@@ -166,9 +166,9 @@ const AspectRatioSelector = ({
                             />
                         </div>
                         
-                        <div className="mt-6 text-slate-600 font-bold text-xl">×</div>
+                        <div className="my-2 md:my-6 text-slate-600 font-bold text-xl">×</div>
 
-                        <div className="flex flex-col gap-1.5 flex-1">
+                        <div className="flex flex-row md:flex-col gap-1.5 flex-1">
                             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Minimum Height (px)</label>
                             <input 
                                 type="number" 

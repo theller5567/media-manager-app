@@ -7,6 +7,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import MediaTagForm from "@/components/media/MediaTagForm";
 import { MediaTagList } from "@/components/media/MediaTagList";
 import { MediaTagDetail } from "@/components/media/MediaTagDetail";
+import Header from "@/components/layout/Header";
 
 
 const TagManagement = () => {
@@ -243,18 +244,12 @@ const TagManagement = () => {
     return (
         <div className="flex flex-col gap-6 h-full flex-1 min-h-0">
           {/* Header */}
-          <div className="flex items-center justify-between shrink-0 bg-slate-800 p-4 rounded-sm">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Tag Management</h2>
-              <p className="text-sm text-slate-400 mt-1">
-                Create and manage custom tags for your media items
-              </p>
-            </div>
-            <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 text-white font-medium hover:bg-cyan-600 transition-colors">
+          <Header title="Tag Management" description="Create and manage custom tags for your media items" >
+          <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 text-white font-medium hover:bg-cyan-600 transition-colors">
                 <Plus className="h-4 w-4" />
                 Create Tag
             </button>
-          </div>
+          </Header>
     
           {/* Statistics Dashboard */}
           {!showForm && (

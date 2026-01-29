@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, ArrowLeft } from 'lucide-react'
 
 export function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
+  const navigate = useNavigate()
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Desktop Sidebar (Visible md and up) */}
@@ -37,7 +37,7 @@ export function DashboardLayout() {
                 <X className="h-6 w-6 text-white" aria-hidden="true" />
               </button>
             </div>
-            <Sidebar />
+            <Sidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
           </div>
         </div>
       )}
@@ -47,13 +47,18 @@ export function DashboardLayout() {
         {/* Mobile Header (Hidden on md and up) */}
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:hidden">
           <h1 className="text-lg font-bold text-slate-900">Media Manager</h1>
-          <button
+          <div className="flex items-center gap-2">
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-6 w-6" aria-hidden="true" />
+            </button>
+            <button
             type="button"
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
+          </div>
         </header>
 
         {/* Dynamic Page Content */}

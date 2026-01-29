@@ -16,7 +16,11 @@ const navItems = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onLinkClick?: () => void;
+}
+
+export function Sidebar({ onLinkClick }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { currentUser, isLoading, isAuthenticated, signOut } = useAuth()
@@ -56,6 +60,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               to={item.href}
+              onClick={onLinkClick}
               className={twMerge(
                 "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive 
@@ -112,6 +117,7 @@ export function Sidebar() {
         ) : (
           <Link
             to="/login"
+            onClick={onLinkClick}
             className="block w-full text-center rounded-md px-3 py-2 text-sm font-medium text-cyan-400 hover:bg-slate-800 transition-colors"
           >
             Sign In

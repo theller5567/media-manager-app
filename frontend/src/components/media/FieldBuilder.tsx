@@ -131,11 +131,11 @@ export function FieldBuilder({ fields, onChange, className }: FieldBuilderProps)
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-slate-200">Custom Fields</label>
+        <label className="hidden md:block text-sm font-medium text-slate-200">Custom Fields</label>
         <button
           type="button"
           onClick={addField}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-cyan-500 hover:bg-slate-700 transition-colors"
+          className="w-full md:w-auto flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 hover:border-cyan-500 hover:bg-slate-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add Field

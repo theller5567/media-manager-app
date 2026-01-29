@@ -129,8 +129,8 @@ const MediaDetail = () => {
   return (
     <>
       <div className="relative flex flex-col gap-4 h-full flex-1 min-h-0">
-        <Header title="Media Detail" description="View and manage media details" >
-              <div className="flex justify-end gap-2">
+        <Header title="Media Detail" description="View and manage media details" childrenLarge={true} >
+              <>
                   {currentUser && (
                     <button
                       className="bg-slate-700 cursor-pointer text-white hover:text-cyan-500 transition-colors inline-flex items-center gap-2 px-3 py-2 rounded-md"
@@ -171,10 +171,10 @@ const MediaDetail = () => {
                 )}
                   </>
                 )}
-              </div>
+              </>
         </Header>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-4 bg-slate-800 rounded-lg p-4 col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 md:gap-6">
+          <div className="mb-4 space-y-4 bg-slate-800 rounded-lg p-4 col-span-2 md:mb-0">
             
             <div>
               {media.mediaType === "image" ? (
@@ -219,7 +219,7 @@ const MediaDetail = () => {
             </div>
           </div>
 
-          <div className="space-y-6 bg-slate-800 rounded-lg">
+          <div className="space-y-6 bg-slate-800 rounded-lg gap-2">
             <div className="p-6">
               <h2 className="text-xl font-semibold text-white mb-2">Details</h2>
               <div className="space-y-3">
