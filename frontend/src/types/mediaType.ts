@@ -11,6 +11,16 @@ export interface CustomField {
   placeholder?: string; // Optional placeholder text
 }
 
+export interface DimensionConstraints {
+  enabled: boolean;
+  aspectRatio: {
+    label: string;
+    value: number | null;
+  };
+  minWidth?: number;
+  minHeight?: number;
+}
+
 export interface MediaType {
   id: string;
   name: string;
@@ -19,6 +29,7 @@ export interface MediaType {
   allowedFormats: string[]; // e.g., ['.jpg', '.png', '.webp']
   fields: CustomField[];
   defaultTags: string[]; // Tags to auto-apply when using this MediaType
+  dimensionConstraints?: DimensionConstraints;
   usageCount?: number; // How many media items use this type (for display)
   createdAt: Date;
   updatedAt: Date;

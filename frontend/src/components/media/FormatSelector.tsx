@@ -11,7 +11,6 @@ interface FormatSelectorProps {
 
 export function FormatSelector({ selectedFormats, onChange, className }: FormatSelectorProps) {
   const formatsByCategory = useMemo(() => getFileExtensionsByCategory(), []);
-
   const toggleFormat = (format: string) => {
     const normalized = normalizeFileExtension(format);
     if (selectedFormats.includes(normalized)) {
@@ -48,6 +47,7 @@ export function FormatSelector({ selectedFormats, onChange, className }: FormatS
   };
 
   return (
+    <>
     <div className={cn('space-y-4', className)}>
       {/* Format Categories */}
       {Object.entries(formatsByCategory).map(([category, formats]) => {
@@ -157,5 +157,7 @@ export function FormatSelector({ selectedFormats, onChange, className }: FormatS
         </div>
       )}
     </div>
+    
+    </>
   );
 }

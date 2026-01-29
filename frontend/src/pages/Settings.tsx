@@ -20,20 +20,19 @@ const Settings = () => {
   const sections = [
     {
       title: "UI Preferences",
-      description: "Customize how the application looks and feels.",
+      description: "Default View Mode",
       icon: Palette,
       content: (
         <div className="space-y-6">
           <div className="flex flex-col gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-200 uppercase tracking-tight">Default View Mode</label>
-              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Choose how your media library is displayed by default.</p>
+              {/* <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Choose how your media library is displayed by default.</p> */}
             </div>
-            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 w-full">
+            <div className="flex bg-slate-900 p-1 rounded-lg w-full">
               <button
                 onClick={() => setViewMode('grid')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all uppercase tracking-tight",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all uppercase cursor-pointer tracking-tight",
                   viewMode === 'grid' 
                     ? "bg-slate-800 text-cyan-400 shadow-sm border border-slate-700" 
                     : "text-slate-500 hover:text-slate-300"
@@ -45,7 +44,7 @@ const Settings = () => {
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all uppercase tracking-tight",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all uppercase cursor-pointer",
                   viewMode === 'list' 
                     ? "bg-slate-800 text-cyan-400 shadow-sm border border-slate-700" 
                     : "text-slate-500 hover:text-slate-300"
@@ -147,7 +146,7 @@ const Settings = () => {
               {/* Kanban Column Header */}
               <div className="flex items-center justify-between px-2 py-1 border-b border-slate-700/50">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded bg-slate-800 border border-slate-700 text-cyan-400">
+                  <div className="p-1.5 text-cyan-400">
                     <section.icon className="w-8 h-8" />
                   </div>
                   <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">{section.title}</h3>
@@ -158,8 +157,8 @@ const Settings = () => {
               </div>
               
               {/* Kanban Column Card */}
-              <div className="bg-slate-800/40 rounded-xl border border-slate-700/60 p-5 shadow-sm hover:border-slate-700 transition-colors flex flex-col gap-4">
-                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-tight leading-relaxed">
+              <div className="bg-slate-800/40  p-5 shadow-sm hover:border-slate-700 transition-colors flex flex-col gap-4">
+                <p className="text-[11px] text-slate-200 font-bold uppercase tracking-tight leading-relaxed">
                   {section.description}
                 </p>
                 <div className="flex-1">

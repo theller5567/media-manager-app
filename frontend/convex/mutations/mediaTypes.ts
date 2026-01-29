@@ -30,6 +30,17 @@ export const create = mutation({
       })
     ),
     defaultTags: v.array(v.string()),
+    dimensionConstraints: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        aspectRatio: v.object({
+          label: v.string(),
+          value: v.union(v.number(), v.null()),
+        }),
+        minWidth: v.optional(v.number()),
+        minHeight: v.optional(v.number()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     // Validate name uniqueness (case-insensitive)
@@ -88,6 +99,7 @@ export const create = mutation({
       allowedFormats: args.allowedFormats,
       fields: args.fields,
       defaultTags: args.defaultTags,
+      dimensionConstraints: args.dimensionConstraints,
     });
     
     // Return the document as-is (matching media mutations pattern)
@@ -128,6 +140,17 @@ export const update = mutation({
       )
     ),
     defaultTags: v.optional(v.array(v.string())),
+    dimensionConstraints: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        aspectRatio: v.object({
+          label: v.string(),
+          value: v.union(v.number(), v.null()),
+        }),
+        minWidth: v.optional(v.number()),
+        minHeight: v.optional(v.number()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const existingMediaType = await ctx.db.get(args.id);
@@ -211,6 +234,9 @@ export const update = mutation({
     if (args.defaultTags !== undefined) {
       updateData.defaultTags = args.defaultTags;
     }
+    if (args.dimensionConstraints !== undefined) {
+      updateData.dimensionConstraints = args.dimensionConstraints;
+    }
     
     await ctx.db.patch(args.id, updateData);
     
@@ -279,6 +305,17 @@ export const createInternal = internalMutation({
       })
     ),
     defaultTags: v.array(v.string()),
+    dimensionConstraints: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        aspectRatio: v.object({
+          label: v.string(),
+          value: v.union(v.number(), v.null()),
+        }),
+        minWidth: v.optional(v.number()),
+        minHeight: v.optional(v.number()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const mediaTypeId = await ctx.db.insert("mediaTypes", {
@@ -288,6 +325,7 @@ export const createInternal = internalMutation({
       allowedFormats: args.allowedFormats,
       fields: args.fields,
       defaultTags: args.defaultTags,
+      dimensionConstraints: args.dimensionConstraints,
     });
     
     return mediaTypeId;

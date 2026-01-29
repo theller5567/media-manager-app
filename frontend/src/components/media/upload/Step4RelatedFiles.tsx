@@ -8,7 +8,6 @@ import { getMediaTypeIcon } from '@/lib/mediaUtils';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 
-
 interface Step4RelatedFilesProps {
   selectedRelatedFiles: string[];
   onRelatedFilesChange: (fileIds: string[]) => void;

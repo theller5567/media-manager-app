@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Eye, FileText, File, Settings, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Eye, FileText, File, Settings, Tag, ChevronLeft, ChevronRight, Sliders } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import type { MediaType, CustomField } from '@/types/mediaType';
+import type { MediaType, CustomField, DimensionConstraints } from '@/types/mediaType';
 import { validateMediaType, validateFieldName } from '@/lib/mediaTypeUtils';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { FormatSelector } from './FormatSelector';
@@ -10,6 +10,8 @@ import { FieldBuilder } from './FieldBuilder';
 import { Badge } from '@/components/ui/Badge';
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator';
 import { twMerge } from 'tailwind-merge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/Dialog';
+import AspectRatioSelector from './AspectRatioSelector';
 
 interface MediaTypeFormProps {
   mediaType?: MediaType;
@@ -68,6 +70,15 @@ export function MediaTypeForm({
     mediaType?.defaultTags || []
   );
   const [tagInput, setTagInput] = useState('');
+  const [dimensionConstraints, setDimensionConstraints] = useState<DimensionConstraints>(
+    mediaType?.dimensionConstraints || {
+      enabled: false,
+      aspectRatio: { label: 'None', value: null },
+      minWidth: 800,
+      minHeight: 800,
+    }
+  );
+  const [isAdvancedDialogOpen, setIsAdvancedDialogOpen] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(true);
   
@@ -96,6 +107,12 @@ export function MediaTypeForm({
       setAllowedFormats(mediaType.allowedFormats);
       setFields(mediaType.fields);
       setSelectedTags(mediaType.defaultTags);
+      setDimensionConstraints(mediaType.dimensionConstraints || {
+        enabled: false,
+        aspectRatio: { label: 'None', value: null },
+        minWidth: 800,
+        minHeight: 800,
+      });
       // Mark all steps as completed when editing
       setCompletedSteps(new Set([0, 1, 2, 3, 4]));
     }
@@ -327,6 +344,7 @@ export function MediaTypeForm({
       allowedFormats,
       fields,
       defaultTags: selectedTags,
+      dimensionConstraints: dimensionConstraints.enabled ? dimensionConstraints : undefined,
     };
 
     const validation = validateMediaType(
@@ -458,6 +476,77 @@ export function MediaTypeForm({
               selectedFormats={allowedFormats}
               onChange={setAllowedFormats}
             />
+
+            {(allowedFormats.some(f => f.match(/\.(jpg|jpeg|png|webp|mp4|mov|webm)$/i))) && (
+              <div className="mt-6 pt-6 border-t border-slate-700/50">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Dimension Constraints</h4>
+                    <p className="text-xs text-slate-500">Require specific aspect ratios or minimum sizes for this media type.</p>
+                    
+                    {dimensionConstraints.enabled ? (
+                      <div className="flex items-center gap-2 mt-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-md">
+                          <span className="text-xs font-bold text-cyan-400 uppercase">
+                            {dimensionConstraints.aspectRatio.label} | {dimensionConstraints.minWidth}x{dimensionConstraints.minHeight}px
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={() => setDimensionConstraints({ ...dimensionConstraints, enabled: false })}
+                            className="text-cyan-400 hover:text-red-400 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-600 mt-2 font-medium italic">No constraints active</p>
+                    )}
+                  </div>
+                  
+                  <Dialog open={isAdvancedDialogOpen} onOpenChange={setIsAdvancedDialogOpen}>
+                    <DialogTrigger asChild>
+                      <button 
+                        type="button" 
+                        className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-all text-sm font-bold shadow-sm"
+                      >
+                        <Sliders className="w-4 h-4" />
+                        Configure Advanced
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="min-w-fit max-w-md bg-slate-900 border-slate-700">
+                      <DialogHeader>
+                        <DialogTitle>Advanced Dimension Controls</DialogTitle>
+                        <DialogDescription>
+                          Set aspect ratio and minimum resolution requirements.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        <AspectRatioSelector 
+                          fileExtension={allowedFormats.find(f => f.match(/\.(jpg|jpeg|png|webp|mp4|mov|webm)$/i)) || '.jpg'} 
+                          initialData={{
+                            enabled: dimensionConstraints.enabled,
+                            aspectRatio: dimensionConstraints.aspectRatio,
+                            minWidth: dimensionConstraints.minWidth ?? 800,
+                            minHeight: dimensionConstraints.minHeight ?? 800,
+                          }}
+                          onSave={(data) => {
+                            setDimensionConstraints({
+                              enabled: data.enabled,
+                              aspectRatio: data.aspectRatio,
+                              minWidth: data.minWidth === '' ? 0 : data.minWidth,
+                              minHeight: data.minHeight === '' ? 0 : data.minHeight,
+                            });
+                            setIsAdvancedDialogOpen(false);
+                          }}
+                          onCancel={() => setIsAdvancedDialogOpen(false)}
+                        />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            )}
           </section>
         );
 
@@ -672,6 +761,30 @@ export function MediaTypeForm({
                     <span className="text-sm text-slate-500">No formats selected</span>
                   )}
                 </div>
+              </div>
+
+              {/* Dimension Constraints Summary */}
+              <div className="p-4 rounded-md bg-slate-900 border border-slate-700 col-span-2 md:col-span-1">
+                <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <Sliders className="h-4 w-4" />
+                  Dimension Constraints
+                </h4>
+                {dimensionConstraints.enabled ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-400 w-24">Aspect Ratio:</span>
+                      <span className="text-slate-200 font-medium">{dimensionConstraints.aspectRatio.label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-400 w-24">Min Size:</span>
+                      <span className="text-slate-200 font-medium">
+                        {dimensionConstraints.minWidth}x{dimensionConstraints.minHeight}px
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-500">No dimension constraints applied</span>
+                )}
               </div>
 
               {/* Custom Fields Summary */}

@@ -141,154 +141,131 @@ export function useMediaUpload() {
     });
   }, []);
 
+  // Track what was last analyzed to prevent redundant calls
+  const lastAnalyzedRef = useRef<{ fileIds: string[], mediaTypeId: string | null, wasAI: boolean }>({
+    fileIds: [],
+    mediaTypeId: null,
+    wasAI: false
+  });
+
   const processAI = useCallback(async () => {
-    // Use ref to prevent multiple simultaneous calls - check and set atomically
-    // This must be synchronous to prevent race conditions
+    // 1. Synchronous check of the lock ref
     if (aiProcessingRef.current) {
-      console.log('[useMediaUpload] processAI already in progress, skipping duplicate call', new Error().stack);
+      console.log('[useMediaUpload] AI lock engaged, skipping call');
       return;
     }
+
+    // 2. Get current values from stateRef (updated by its own effect)
+    const { useAI, selectedMediaType, files, aiProcessing } = stateRef.current;
     
-    // Immediately set ref to prevent other calls (atomic operation)
-    // We'll reset it if conditions aren't met
+    console.log('[useMediaUpload] processAI state check:', { useAI, hasMediaType: !!selectedMediaType, fileCount: files.length, aiProcessing });
+
+    // 3. Early return if conditions aren't met
+    if (!useAI || !selectedMediaType || files.length === 0 || aiProcessing) {
+      return;
+    }
+
+    // 4. Check if we've already successfully analyzed this exact combination with AI
+    const currentFileIds = files.map(f => f.id);
+    const isSameInput = 
+      lastAnalyzedRef.current.wasAI === true &&
+      lastAnalyzedRef.current.mediaTypeId === selectedMediaType.id &&
+      lastAnalyzedRef.current.fileIds.length === currentFileIds.length &&
+      lastAnalyzedRef.current.fileIds.every((id, i) => id === currentFileIds[i]);
+
+    if (isSameInput) {
+      console.log('[useMediaUpload] AI already performed for these inputs, skipping');
+      return;
+    }
+
+    // 5. Atomic Lock and state update
     aiProcessingRef.current = true;
-    console.log('[useMediaUpload] processAI starting, ref set to true');
+    lastAnalyzedRef.current = { 
+      fileIds: currentFileIds, 
+      mediaTypeId: selectedMediaType.id,
+      wasAI: true 
+    };
     
-    setState((prev) => {
-      // Check conditions inside setState to get latest state
-      if (!prev.useAI || !prev.selectedMediaType || prev.files.length === 0 || prev.aiProcessing) {
-        // Reset ref if conditions aren't met
-        aiProcessingRef.current = false;
-        return prev;
+    setState(prev => ({ ...prev, aiProcessing: true }));
+
+    try {
+      console.log('[useMediaUpload] Starting AI analysis for:', files[0].file.name);
+      
+      const firstFile = files[0];
+      setCurrentAIFileName(firstFile.file.name);
+      
+      const suggestions = await analyzeFileWithAI(
+        firstFile.file, 
+        selectedMediaType,
+        analyzeMediaWithGemini
+      );
+      
+      setCurrentAIFileName(undefined);
+
+      // Apply MediaType default tags
+      if (selectedMediaType.defaultTags && selectedMediaType.defaultTags.length > 0) {
+        suggestions.tags = [
+          ...(suggestions.tags || []),
+          ...selectedMediaType.defaultTags,
+        ];
+        suggestions.tags = [...new Set(suggestions.tags)];
       }
 
-      // Start AI processing asynchronously
-      (async () => {
-        try {
-          // Get current state snapshot
-          const currentState = { ...prev };
-          
-          // Process first file for common fields (all files get same common fields)
-          const firstFile = currentState.files[0];
-          
-          // Set current file being analyzed
-          setCurrentAIFileName(firstFile.file.name);
-          
-          // Pass the Convex action directly to analyzeFileWithAI
-          // analyzeMediaWithGemini may be undefined initially, so pass it conditionally
-          console.log('[useMediaUpload] processAI called, analyzeMediaWithGemini available:', !!analyzeMediaWithGemini);
-          const suggestions = await analyzeFileWithAI(
-            firstFile.file, 
-            currentState.selectedMediaType!,
-            analyzeMediaWithGemini ?? undefined
-          );
-          
-          // Clear current file name after analysis completes
-          setCurrentAIFileName(undefined);
+      console.log('[useMediaUpload] AI analysis successful');
 
-          // Apply MediaType default tags
-          if (currentState.selectedMediaType!.defaultTags && currentState.selectedMediaType!.defaultTags.length > 0) {
-            suggestions.tags = [
-              ...(suggestions.tags || []),
-              ...currentState.selectedMediaType!.defaultTags,
-            ];
-            suggestions.tags = [...new Set(suggestions.tags)]; // Remove duplicates
-          }
-
-          setState((latest) => {
-            // Only update fields if they have actual values from AI
-            // Use nullish coalescing to distinguish between empty string and undefined/null
-            const newCommonFields = { ...latest.commonFields };
-            
-            if (suggestions.title !== undefined && suggestions.title !== null && suggestions.title !== '') {
-              newCommonFields.title = suggestions.title;
-            }
-            if (suggestions.description !== undefined && suggestions.description !== null && suggestions.description !== '') {
-              newCommonFields.description = suggestions.description;
-            }
-            if (suggestions.altText !== undefined && suggestions.altText !== null && suggestions.altText !== '') {
-              newCommonFields.altText = suggestions.altText;
-            }
-            if (suggestions.tags !== undefined && suggestions.tags !== null && suggestions.tags.length > 0) {
-              newCommonFields.tags = [...suggestions.tags];
-            }
-            
-            console.log('[useMediaUpload] Updating commonFields with AI suggestions:', {
-              before: latest.commonFields,
-              suggestions,
-              after: newCommonFields,
-            });
-            
-            return {
-              ...latest,
-              aiProcessing: false,
-              aiSuggestions: suggestions,
-              commonFields: newCommonFields,
-            };
-          });
-        } catch (error) {
-          setState((current) => ({
-            ...current,
-            aiProcessing: false,
-            errors: {
-              ...current.errors,
-              ai: [
-                error instanceof Error 
-                  ? error.message.includes('API key') 
-                    ? 'AI service configuration error. Please check your API key.'
-                    : error.message.includes('quota') || error.message.includes('rate limit')
-                    ? 'AI service quota exceeded. Please try again later.'
-                    : error.message.includes('too large') || error.message.includes('arguments size is too large') || error.message.includes('5 MiB limit')
-                    ? 'File is too large for AI analysis. Files larger than ~3.75MB cannot be analyzed due to technical limits. Basic metadata will be generated instead.'
-                    : `AI processing failed: ${error.message}`
-                  : 'AI processing failed. Please try again.',
-              ],
-            },
-          }));
-        }
-      })();
-
-      return { ...prev, aiProcessing: true };
-    });
-  }, [analyzeMediaWithGemini]);
+      setState((latest) => {
+        const newCommonFields = { ...latest.commonFields };
+        
+        if (suggestions.title) newCommonFields.title = suggestions.title;
+        if (suggestions.description) newCommonFields.description = suggestions.description;
+        if (suggestions.altText) newCommonFields.altText = suggestions.altText;
+        if (suggestions.tags?.length) newCommonFields.tags = [...suggestions.tags];
+        
+        return {
+          ...latest,
+          aiProcessing: false,
+          aiSuggestions: suggestions,
+          commonFields: newCommonFields,
+        };
+      });
+    } catch (error) {
+      console.error('[useMediaUpload] AI processing error:', error);
+      // Reset lastAnalyzed on error so it can be retried if inputs change or AI is toggled
+      lastAnalyzedRef.current.wasAI = false;
+      
+      setState((current) => ({
+        ...current,
+        aiProcessing: false,
+        errors: {
+          ...current.errors,
+          ai: [error instanceof Error ? error.message : 'AI processing failed'],
+        },
+      }));
+    } finally {
+      aiProcessingRef.current = false;
+    }
+  }, [analyzeMediaWithGemini]); // analyzeMediaWithGemini is the only external dependency
 
   const setMediaType = useCallback((mediaType: MediaType | null) => {
-    setState((prev) => {
-      const newState = { ...prev, selectedMediaType: mediaType };
-      
-      // If AI is enabled and MediaType is selected, trigger AI processing
-      // Only trigger if not already processing to prevent multiple calls
-      if (prev.useAI && mediaType && !prev.aiProcessing && !aiProcessingRef.current) {
-        // Check ref again inside setTimeout to prevent race conditions
-        setTimeout(() => {
-          if (!aiProcessingRef.current) {
-            processAI();
-          }
-        }, 0);
-      }
-      
-      return newState;
-    });
-  }, [processAI]);
+    setState((prev) => ({ ...prev, selectedMediaType: mediaType }));
+  }, []);
 
   const setUseAI = useCallback((useAI: boolean) => {
-    setState((prev) => {
-      const newState = { ...prev, useAI };
-      
-      // If enabling AI and MediaType is selected, trigger AI processing
-      // Only trigger if not already processing to prevent multiple calls
-      if (useAI && prev.selectedMediaType && !prev.aiProcessing && !aiProcessingRef.current) {
-        // Check ref again inside setTimeout to prevent race conditions
-        setTimeout(() => {
-          if (!aiProcessingRef.current) {
-            processAI();
-          }
-        }, 0);
-      }
-      
-      return newState;
-    });
-  }, [processAI]);
+    setState((prev) => ({ ...prev, useAI }));
+  }, []);
+
+  // Use a separate effect to trigger processAI when inputs change
+  // This is safe because processAI now uses lastAnalyzedRef to block loops
+  useEffect(() => {
+    if (state.useAI && state.selectedMediaType && state.files.length > 0) {
+      console.log('[useMediaUpload] Triggering AI analysis via useEffect', { 
+        useAI: state.useAI, 
+        mediaType: state.selectedMediaType.name,
+        fileCount: state.files.length 
+      });
+      processAI();
+    }
+  }, [state.useAI, state.selectedMediaType?.id, state.files.length, processAI]);
 
   const setCommonFields = useCallback((fields: Partial<CommonFields>) => {
     setState((prev) => ({
@@ -350,9 +327,7 @@ export function useMediaUpload() {
 
   // Use a ref to always read the latest state for validation
   const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  stateRef.current = state; // Update synchronously during render to avoid race conditions in effects
 
   // Separate function to update validation errors (called from event handlers, not during render)
   const updateValidationErrors = useCallback((errors: Record<string, Record<string, string[]>>) => {

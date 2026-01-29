@@ -81,6 +81,17 @@ export default defineSchema({
       })
     ),
     defaultTags: v.array(v.string()),
+    dimensionConstraints: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        aspectRatio: v.object({
+          label: v.string(),
+          value: v.union(v.number(), v.null()),
+        }),
+        minWidth: v.optional(v.number()),
+        minHeight: v.optional(v.number()),
+      })
+    ),
   })
     .index("by_name", ["name"]),
   mediaTags: defineTable({
