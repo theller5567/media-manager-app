@@ -1,6 +1,6 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
-import { getCurrentUser, isAdmin } from "../lib/auth";
+import { getCurrentUser } from "../lib/auth";
 
 /**
  * Get all media items

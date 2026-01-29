@@ -8,7 +8,6 @@ import {
   type VideoTransformationOptions
 } from "@/lib/cloudinary";
 import { downloadFile } from "@/lib/downloadUtils";
-import LazyImage from "../ui/LazyImage";
 import ReactPlayer from "react-player";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -216,10 +215,10 @@ const DownloadDialog = ({ open, onOpenChange, media }: DownloadDialogProps) => {
               ) : isVideo ? (
                 <div className="w-full">
                   <ReactPlayer
-                    url={previewUrl}
+                    src={previewUrl}
                     width="100%"
                     height="auto"
-                    controls
+                    controls={true}
                     className="rounded"
                   />
                 </div>

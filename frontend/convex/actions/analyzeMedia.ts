@@ -102,23 +102,19 @@ Be specific and descriptive. For images, describe what you see. For videos, desc
       ];
 
       // Call Gemini API using the correct method
-      // Note: @google/genai package recommends using getGenerativeModel
       // Using gemini-2.5-flash which is stable and supports vision for images/videos
-      const model = genAI.getGenerativeModel({ 
+      const result = await genAI.models.generateContent({
         model: "gemini-2.5-flash",
-        generationConfig: {
+        contents,
+        config: {
           responseMimeType: "application/json",
           temperature: 0.7,
           maxOutputTokens: 2048,
         }
       });
 
-      const result = await model.generateContent({
-        contents,
-      });
-
       // Extract text from response
-      const text = result.response.text();
+      const text = result.text;
       
       if (!text) {
         throw new Error('Gemini API returned empty response');

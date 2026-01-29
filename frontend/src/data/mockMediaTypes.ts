@@ -1,6 +1,5 @@
-import type { MediaType, CustomField } from '@/types/mediaType';
+import type { MediaType } from '@/types/mediaType';
 import { generateFieldId } from '@/lib/mediaTypeUtils';
-import { mockMediaData } from './mockMediaData';
 
 // Helper function to create initial MediaTypes with proper field IDs
 function createInitialMediaTypes(): MediaType[] {
@@ -174,7 +173,7 @@ export function deleteMediaType(id: string): boolean {
  * Get usage count for a MediaType (how many media items use this type)
  * For now, checks mockMediaData. In future, this would query Convex.
  */
-export function getMediaTypeUsageCount(id: string): number {
+export function getMediaTypeUsageCount(_id: string): number {
   // TODO: When Convex is integrated, query media table for items with this mediaTypeId
   // For now, return 0 as mockMediaData doesn't have mediaTypeId references yet
   return 0;

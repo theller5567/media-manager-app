@@ -453,7 +453,7 @@ export function MediaUpload({ open, onOpenChange, onUploadComplete }: MediaUploa
       />
 
       {/* Upload Error Modal */}
-      <Dialog open={!!uploadError} onOpenChange={(open) => !open && setUploadError(null)}>
+      <Dialog open={!!uploadError} onOpenChange={(open: boolean) => !open && setUploadError(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl text-red-400 flex items-center gap-2">

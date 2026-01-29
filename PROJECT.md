@@ -67,6 +67,7 @@
 - **pnpm** - Package manager
 - **Prettier + ESLint** - Code quality
 - **Git** - Version control
+- **Vercel** - Frontend hosting and deployment platform
 
 ---
 
@@ -971,14 +972,19 @@ pnpm tsc --noEmit --watch
 
 ### Deploying to Production
 ```bash
-# Deploy Convex backend
+# 1. Deploy Convex backend
+cd frontend
 pnpm dlx convex deploy --prod
 
-# Build frontend
-pnpm build
+# 2. Deploy frontend to Vercel
+# Option A: Via Git (recommended - auto-deploys on push to main)
+git push origin main
 
-# Deploy frontend to Netlify/Vercel
-# (or use git push with auto-deploy)
+# Option B: Via Vercel CLI
+vercel --prod
+
+# Option C: Via Vercel Dashboard
+# Push to main branch, Vercel will auto-deploy if connected
 ```
 
 ### Environment Variables in Production
@@ -1139,11 +1145,13 @@ ls convex/_generated/
 
 ### Pre-Deployment
 - [ ] All environment variables set in Convex Dashboard (production)
+- [ ] All environment variables set in Vercel Dashboard (production)
 - [ ] Cloudinary account upgraded if needed (check storage limits)
 - [ ] OpenAI billing configured
 - [ ] SendGrid sender identity verified
-- [ ] Domain configured for frontend
-- [ ] SSL certificate active
+- [ ] Vercel project created and connected to Git repository
+- [ ] Custom domain configured in Vercel (if applicable)
+- [ ] SSL certificate active (automatic with Vercel)
 
 ### Convex Deployment
 ```bash
@@ -1157,10 +1165,79 @@ pnpm dlx convex deploy --prod
 
 ### Frontend Deployment
 
-**Option 1: Netlify**
+**Primary Platform: Vercel** ✅
+
+We've chosen **Vercel** as our deployment platform for the following reasons:
+- **Optimized for React/Vite**: Built-in support and optimizations for React 19 and Vite builds
+- **Excellent Convex Integration**: Seamless integration with Convex backend
+- **Edge Functions**: Fast API routes and middleware support
+- **Automatic Optimizations**: Image optimization, code splitting, and caching out of the box
+- **Preview Deployments**: Automatic preview deployments for every PR
+- **Zero Configuration**: Works out of the box with our Vite setup
+
+#### Vercel Setup Instructions
+
+**1. Install Vercel CLI (optional, for local testing)**
+```bash
+pnpm add -g vercel
+```
+
+**2. Connect Repository to Vercel**
+- Go to [vercel.com](https://vercel.com) and sign in
+- Click "Add New Project"
+- Import your Git repository (GitHub/GitLab/Bitbucket)
+- Vercel will auto-detect the Vite configuration
+
+**3. Configure Project Settings**
+- **Root Directory**: Leave as root (monorepo structure)
+- **Framework Preset**: Vite (auto-detected)
+- **Build Command**: `cd frontend && pnpm build` (or use `vercel.json` settings)
+- **Output Directory**: `frontend/dist`
+- **Install Command**: `pnpm install` (handles monorepo workspace)
+
+**4. Set Environment Variables**
+In Vercel dashboard → Project Settings → Environment Variables, add:
+```
+VITE_CONVEX_URL=<your-production-convex-url>
+VITE_CLOUDINARY_CLOUD_NAME=<your-cloudinary-cloud-name>
+VITE_CLOUDINARY_API_KEY=<your-cloudinary-api-key>
+VITE_CLOUDINARY_API_SECRET=<your-cloudinary-api-secret>
+VITE_GEMINI_API_KEY=<your-gemini-api-key>
+VITE_OPENAI_API_KEY=<your-openai-api-key>
+VITE_PINECONE_API_KEY=<your-pinecone-api-key>
+VITE_PINECONE_ENVIRONMENT=<your-pinecone-environment>
+VITE_PINECONE_INDEX_NAME=<your-pinecone-index-name>
+VITE_SENDGRID_API_KEY=<your-sendgrid-api-key>
+```
+
+**5. Verify Configuration**
+The project includes a `vercel.json` configuration file with:
+- Build command: `cd frontend && pnpm build`
+- Output directory: `frontend/dist`
+- SPA routing: All routes redirect to `index.html` for React Router
+- Asset caching: Long-term caching for static assets
+
+**6. Deploy**
+```bash
+# Via CLI (if installed)
+vercel --prod
+
+# Or push to main branch (auto-deploys if connected to Git)
+git push origin main
+```
+
+**7. Custom Domain (Optional)**
+- Go to Project Settings → Domains
+- Add your custom domain
+- Follow DNS configuration instructions
+- SSL certificate is automatically provisioned by Vercel
+
+#### Alternative Platforms
+
+**Netlify** (Alternative Option)
 ```bash
 # Build
-pnpm build
+cd frontend && pnpm build
 
 # Deploy
 netlify deploy --prod
@@ -1168,19 +1245,10 @@ netlify deploy --prod
 # Or connect Git repo for auto-deploy
 ```
 
-**Option 2: Vercel**
-```bash
-# Install Vercel CLI
-pnpm add -g vercel
-
-# Deploy
-vercel --prod
-```
-
-**Option 3: Cloudflare Pages**
+**Cloudflare Pages** (Alternative Option)
 ```bash
 # Build
-pnpm build
+cd frontend && pnpm build
 
 # Deploy via Cloudflare dashboard
 # Or use Wrangler CLI
