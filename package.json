@@ -10,11 +10,15 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.18.0 <21.0.0",
+    "pnpm": ">=10.28.0"
+  },
   "pnpm": {
-  "peerDependencyRules": {
-    "allowedVersions": {
-      "react": "19"
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react": "19"
+      }
     }
   }
-}
 }

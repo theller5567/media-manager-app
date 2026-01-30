@@ -1,0 +1,8 @@
+# pnpm configuration to fix ERR_INVALID_THIS errors
+strict-peer-dependencies=false
+auto-install-peers=true
+prefer-frozen-lockfile=false
+network-timeout=600000
+fetch-retries=5
+fetch-retry-mintimeout=10000
+fetch-retry-maxtimeout=60000

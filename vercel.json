@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "cd frontend && pnpm build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "pnpm install",
+  "installCommand": "corepack enable && corepack prepare pnpm@10.28.0 --activate && pnpm install --no-frozen-lockfile",
   "framework": "vite",
   "rewrites": [
     {
