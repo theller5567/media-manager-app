@@ -1,12 +1,19 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
+import type { JSX } from "react"
 
 import { cn } from "@/lib/utils"
 
 const Dialog = DialogPrimitive.Root
 
-const DialogTrigger = DialogPrimitive.Trigger
+const DialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Trigger>,
+  React.PropsWithChildren<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>>
+>((props, ref) => <DialogPrimitive.Trigger ref={ref} {...props} />) as typeof DialogPrimitive.Trigger & {
+  (props: React.PropsWithChildren<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>>): JSX.Element;
+}
+DialogTrigger.displayName = DialogPrimitive.Trigger.displayName
 
 const DialogPortal = DialogPrimitive.Portal
 
@@ -81,8 +88,8 @@ DialogFooter.displayName = "DialogFooter"
 
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
+  React.PropsWithChildren<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>>
+>(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
@@ -90,19 +97,23 @@ const DialogTitle = React.forwardRef<
       className
     )}
     {...props}
-  />
+  >
+    {children}
+  </DialogPrimitive.Title>
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
 const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
+  React.PropsWithChildren<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>>
+>(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
     className={cn("text-sm text-slate-400", className)}
     {...props}
-  />
+  >
+    {children}
+  </DialogPrimitive.Description>
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
