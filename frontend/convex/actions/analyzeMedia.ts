@@ -23,7 +23,7 @@ export const analyzeMediaWithGemini = action({
       })
     ),
   },
-  handler: async (ctx, args): Promise<{
+  handler: async (_ctx, args): Promise<{
     title?: string;
     description?: string;
     altText?: string;
