@@ -17,11 +17,27 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      await signIn(email, password);
+      console.log("[Login] Attempting to sign in:", { email });
+      const result = await signIn(email, password);
+      console.log("[Login] Sign in result:", result);
+      
+      // Check if there's an error in the result (BetterAuth sometimes returns errors in result object)
+      if (result && typeof result === 'object' && 'error' in result && result.error) {
+        console.error("[Login] Sign in error in result:", result.error);
+        const errorMessage = result.error?.message || JSON.stringify(result.error);
+        setError(errorMessage);
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Success - redirect to library
+      console.log("[Login] Sign in successful, redirecting to library");
       navigate("/library");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sign in. Please check your credentials.");
+      console.error("[Login] Sign in exception:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign in. Please check your credentials.";
+      console.error("[Login] Error message:", errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
