@@ -24,6 +24,3 @@ out/
 *.log
 npm-debug.log*
 pnpm-debug.log*
-
-# Temporarily ignore marketing-site (remove when ready to commit)
-marketing-site/
