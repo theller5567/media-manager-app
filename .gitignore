@@ -24,3 +24,6 @@ out/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Marketing site (migrated to separate repository)
+marketing-site/
