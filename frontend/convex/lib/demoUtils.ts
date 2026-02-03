@@ -7,7 +7,7 @@ import type { Id, TableNames } from "../_generated/dataModel";
  * We'll use a pattern that's clearly fake but matches the expected format
  */
 export function generateFakeId<T extends TableNames>(
-  tableName: T
+  _tableName: T
 ): Id<T> {
   // Generate a fake ID that matches Convex's ID format
   // Convex IDs start with a letter (like 'j') followed by alphanumeric characters

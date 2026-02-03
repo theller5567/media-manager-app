@@ -64,7 +64,7 @@ export const updateRole = mutation({
     await requireRole(ctx, "admin");
     
     // Prevent DemoUser from changing roles (explicit check)
-    const user = await requireAuth(ctx);
+    await requireAuth(ctx);
     if (await isDemoUser(ctx)) {
       throw new Error("DemoUser cannot change roles");
     }
