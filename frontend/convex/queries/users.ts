@@ -2,7 +2,7 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "../auth";
 import { components } from "../_generated/api";
-import { requireRole, getCurrentUser as getCurrentUserHelper, isAdmin as isAdminHelper, isDemoUser as isDemoUserHelper } from "../lib/auth";
+import { requireRole, getCurrentUser as getCurrentUserHelper, isAdmin as isAdminHelper } from "../lib/auth";
 
 /**
  * Get current authenticated user's profile.
@@ -36,13 +36,19 @@ export const checkIsAdmin = query({
 
 /**
  * Check if current user is DemoUser.
- * Returns false on any error (e.g. unauthenticated, auth component config issue) so the app never crashes.
+ * Returns false on any error so the app never crashes.
+ * Inlined here so a single try/catch wraps the auth component call (errors from components can bypass catches in helper modules).
  */
 export const checkIsDemoUser = query({
   args: {},
   handler: async (ctx) => {
     try {
-      return await isDemoUserHelper(ctx);
+      const user = await authComponent.getAuthUser(ctx);
+      if (!user) return false;
+      return (
+        user.email === process.env.DEMO_USER_EMAIL ||
+        (user as { role?: string }).role === "demoUser"
+      );
     } catch {
       return false;
     }

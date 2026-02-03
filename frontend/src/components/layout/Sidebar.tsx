@@ -25,10 +25,9 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
   const navigate = useNavigate()
   const { currentUser, isLoading, isAuthenticated, signOut } = useAuth()
   
-  // Check admin status server-side
-  const isAdmin = useQuery(api.queries.users.checkIsAdmin) ?? false
-  // Check if user is DemoUser
-  const isDemoUser = useQuery(api.queries.users.checkIsDemoUser) ?? false
+  // Only run auth queries when authenticated so we never hit the auth component for logged-out users
+  const isAdmin = useQuery(api.queries.users.checkIsAdmin, isAuthenticated ? {} : "skip") ?? false
+  const isDemoUser = useQuery(api.queries.users.checkIsDemoUser, isAuthenticated ? {} : "skip") ?? false
 
   const handleLogout = async () => {
     try {
