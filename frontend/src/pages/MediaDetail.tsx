@@ -21,7 +21,7 @@ const MediaDetail = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
 
   const mediaDoc = useQuery(
     api.queries.media.getById,
@@ -30,9 +30,11 @@ const MediaDetail = () => {
 
   const deleteMediaMutation = useMutation(api.mutations.media.deleteMedia);
 
-  // Check if current user is admin (server-side check includes email-based admin)
-  // This must be called before early returns to follow Rules of Hooks
-  const userIsAdmin = useQuery(api.queries.users.checkIsAdmin);
+  // Only run when authenticated so we never hit the auth component for logged-out users
+  const userIsAdmin = useQuery(
+    api.queries.users.checkIsAdmin,
+    isAuthenticated ? {} : "skip"
+  );
 
   // Query for uploadedByUser - must be called before early returns to follow Rules of Hooks
   const uploadedByUser = useQuery(

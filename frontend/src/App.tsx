@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/BaseLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppErrorBoundary } from '@/components/auth/AppErrorBoundary'
 import { DemoModeBanner } from '@/components/layout/DemoModeBanner'
 import MediaLibrary from '@/pages/MediaLibrary'
 import MediaTypeCreator from '@/pages/MediaTypeCreator'
@@ -33,9 +34,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+function AppContentWithErrorBoundary() {
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+  const handleLogout = async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
   return (
-    <BrowserRouter>
+    <AppErrorBoundary onLogout={handleLogout}>
       <DemoModeBanner />
       <Routes>
         <Route 
@@ -70,6 +77,14 @@ function App() {
           <Route path="/media/:mediaId" element={<MediaDetail />} />
         </Route>
       </Routes>
+    </AppErrorBoundary>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContentWithErrorBoundary />
     </BrowserRouter>
   )
 }
