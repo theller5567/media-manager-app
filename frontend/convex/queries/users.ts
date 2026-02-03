@@ -1,7 +1,8 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "../auth";
-import { requireRole, getCurrentUser as getCurrentUserHelper, isAdmin as isAdminHelper } from "../lib/auth";
+import { components } from "../_generated/api";
+import { requireRole, getCurrentUser as getCurrentUserHelper, isAdmin as isAdminHelper, isDemoUser as isDemoUserHelper } from "../lib/auth";
 
 /**
  * Get current authenticated user's profile
@@ -24,25 +25,50 @@ export const checkIsAdmin = query({
 });
 
 /**
- * Get user by ID (admin only)
+ * Check if current user is DemoUser
+ */
+export const checkIsDemoUser = query({
+  args: {},
+  handler: async (ctx) => {
+    return await isDemoUserHelper(ctx);
+  },
+});
+
+/**
+ * Get user by ID
+ * Allows any authenticated user to view basic user info (for display purposes like "Uploaded By")
  */
 export const getUserById = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // Require admin role
-    await requireRole(ctx, "admin");
-    
-    // Get user from BetterAuth component
-    // Note: BetterAuth doesn't expose a direct getUserById, so we'll need to query the component table
-    // For now, we'll use getAuthUser if it's the current user, or require admin access
+    // Require authentication (but not admin)
     const currentUser = await getCurrentUserHelper(ctx);
-    if (currentUser?._id === args.userId) {
-      return currentUser;
+    if (!currentUser) {
+      throw new Error("Authentication required");
     }
     
-    // Admin can query any user - this would need BetterAuth API support
-    // For now, return current user or null
-    return currentUser;
+    // Use BetterAuth component's findOne to query the user table
+    // This allows any authenticated user to view user info for display purposes
+    try {
+      const user = await ctx.runQuery(
+        components.betterAuth.adapter.findOne,
+        {
+          model: "user",
+          where: [
+            {
+              field: "_id",
+              operator: "eq",
+              value: args.userId,
+            },
+          ],
+        }
+      );
+      return user;
+    } catch (error) {
+      // If user not found or error, return null gracefully
+      // Frontend will handle null case (e.g., show "Unknown User" or hide the field)
+      return null;
+    }
   },
 });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { MediaItem } from "@/lib/mediaUtils";
@@ -8,15 +8,22 @@ import { getAvailableTags } from "@/lib/filteringUtils";
 import type { CustomField } from "@/types/mediaType";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/Dialog";
 import { Badge } from "../ui/Badge";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/Popover";
 import { cn } from "@/lib/utils";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Sparkles } from "lucide-react";
 import React from "react";
+
+/** Base fields that AI can fill (edit dialog). */
+const AI_FILLABLE_FIELDS = ["title", "description", "altText", "tags"] as const;
+type AiFillableField = (typeof AI_FILLABLE_FIELDS)[number];
 
 interface ExtendedMediaItem extends MediaItem {
   format?: string;
   width?: number;
   height?: number;
   duration?: number;
+  cloudinarySecureUrl?: string;
+  mimeType?: string;
 }
 
 interface MediaEditDialogProps {
@@ -34,6 +41,9 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
   const [customMetadata, setCustomMetadata] = useState<Record<string, any>>(
     media.customMetadata || {}
   );
+  const [aiSelectedFields, setAiSelectedFields] = useState<AiFillableField[]>([]);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // UI state
   const [tagInput, setTagInput] = useState("");
@@ -44,6 +54,7 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
 
   // Convex hooks
   const updateMedia = useMutation(api.mutations.media.update);
+  const analyzeMediaFromUrl = useAction(api.actions.analyzeMedia.analyzeMediaFromUrl);
   const allMediaItems = useQuery(api.queries.media.list);
 
   // Fetch MediaType from Convex if customMediaTypeId exists
@@ -71,6 +82,7 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
     const mediaItems: MediaItem[] = allMediaItems.map((doc: any) => ({
       id: doc._id,
       filename: doc.filename,
+      mimeType: doc.mimeType,
       thumbnail: doc.thumbnail,
       mediaType: doc.mediaType,
       customMediaTypeId: doc.customMediaTypeId,
@@ -83,6 +95,7 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
       customMetadata: doc.customMetadata,
       aiGenerated: doc.aiGenerated,
       dateModified: new Date(doc.dateModified),
+      cloudinarySecureUrl: doc.cloudinarySecureUrl,
     }));
     return getAvailableTags(mediaItems);
   }, [allMediaItems]);
@@ -108,6 +121,8 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
       setShowTagSuggestions(false);
       setErrors({});
       setSaveError(null);
+      setAiSelectedFields([]);
+      setAiError(null);
     }
   }, [open, media]);
 
@@ -143,6 +158,93 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
       setErrors(newErrors);
     }
   };
+
+  const isAiFieldSelected = (field: AiFillableField) => aiSelectedFields.includes(field);
+  const toggleAiField = (field: AiFillableField) => {
+    setAiError(null);
+    setAiSelectedFields((prev) =>
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
+    );
+  };
+  const selectAllAiFields = () => {
+    setAiError(null);
+    setAiSelectedFields([...AI_FILLABLE_FIELDS]);
+  };
+  const clearAiFields = () => {
+    setAiError(null);
+    setAiSelectedFields([]);
+  };
+
+  const handleGenerateAi = async () => {
+    if (aiSelectedFields.length === 0) return;
+    const mediaUrl =
+      (media as ExtendedMediaItem).cloudinarySecureUrl || media.thumbnail || "";
+    if (!mediaUrl.startsWith("http")) {
+      setAiError("Media URL is not available for AI analysis.");
+      return;
+    }
+    const formatToMime: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      mp4: "video/mp4",
+      mov: "video/quicktime",
+      webm: "video/webm",
+    };
+    const ext = (
+      (media as ExtendedMediaItem).format ||
+      media.filename?.split(".").pop() ||
+      ""
+    ).toLowerCase();
+    const mimeType =
+      (media as ExtendedMediaItem).mimeType ||
+      formatToMime[ext] ||
+      (media.mediaType === "image"
+        ? "image/jpeg"
+        : media.mediaType === "video"
+          ? "video/mp4"
+          : "application/octet-stream");
+
+    setAiGenerating(true);
+    setAiError(null);
+    try {
+      const suggestions = await analyzeMediaFromUrl({
+        mediaUrl,
+        mimeType,
+        filename: media.filename,
+        mediaType: mediaType
+          ? {
+              name: mediaType.name,
+              description: mediaType.description,
+              defaultTags: mediaType.defaultTags,
+            }
+          : undefined,
+      });
+      if (aiSelectedFields.includes("title") && suggestions.title != null) {
+        setTitle(suggestions.title);
+      }
+      if (aiSelectedFields.includes("description") && suggestions.description != null) {
+        setDescription(suggestions.description);
+      }
+      if (aiSelectedFields.includes("altText") && suggestions.altText != null) {
+        setAltText(suggestions.altText);
+      }
+      if (aiSelectedFields.includes("tags") && suggestions.tags != null && suggestions.tags.length > 0) {
+        setTags(suggestions.tags);
+      }
+      setAiSelectedFields([]);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "AI analysis failed.");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  
+
+
 
   // Validation
   const validateForm = (): boolean => {
@@ -466,6 +568,7 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
 
   // Get media type icon
   const MediaTypeIcon = getMediaTypeIcon(media.mediaType);
+  const canUseAi = media.mediaType === "image" || media.mediaType === "video";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -487,70 +590,84 @@ const MediaEditDialog = ({ open, onOpenChange, media }: MediaEditDialogProps) =>
             </div>
           )}
 
-          {/* Read-Only Fields Section
-          <div className="space-y-4 p-4 bg-slate-900 rounded-lg">
-            <h3 className="text-lg font-semibold text-white">File Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-400">
-                  Filename
-                </label>
-                <p className="text-white">{media.filename}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-400">
-                  File Size
-                </label>
-                <p className="text-white">{formatFileSize(media.fileSize)}</p>
-              </div>
-              {media.format && (
-                <div>
-                  <label className="text-sm font-medium text-slate-400">
-                    Format
-                  </label>
-                  <p className="text-white">{media.format}</p>
-                </div>
-              )}
-              {media.width && media.height && (
-                <div>
-                  <label className="text-sm font-medium text-slate-400">
-                    Dimensions
-                  </label>
-                  <p className="text-white">
-                    {media.width} × {media.height}
-                  </p>
-                </div>
-              )}
-              {media.duration && (
-                <div>
-                  <label className="text-sm font-medium text-slate-400">
-                    Duration
-                  </label>
-                  <p className="text-white">
-                    {Math.floor(media.duration / 60)}:
-                    {(media.duration % 60).toString().padStart(2, "0")}
-                  </p>
-                </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-slate-400">
-                  Media Type
-                </label>
-                <div className="flex items-center gap-2">
-                  {React.createElement(MediaTypeIcon, {
-                    className: "h-4 w-4 text-slate-400",
-                  })}
-                  <p className="text-white capitalize">{media.mediaType}</p>
-                </div>
-              </div>
-            </div>
-          </div> */}
-
           {/* Editable Base Fields */}
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white">
               Basic Information
             </h3>
+            {canUseAi && (
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 text-sm text-cyan-500 hover:text-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Fill with AI
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" sideOffset={8} className="flex flex-col gap-3 min-w-[240px]">
+                    <p className="text-sm text-slate-400">
+                      Select the fields you want AI to fill, then click Generate.
+                    </p>
+                    {AI_FILLABLE_FIELDS.map((field) => (
+                      <label
+                        key={field}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isAiFieldSelected(field)}
+                          onChange={() => toggleAiField(field)}
+                          disabled={aiGenerating}
+                          className="rounded border border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+                        />
+                        <span className="text-sm text-white capitalize">
+                          {field === "altText" ? "Alt Text" : field}
+                        </span>
+                      </label>
+                    ))}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllAiFields}
+                        disabled={aiGenerating}
+                        className="text-xs text-slate-400 hover:text-white disabled:opacity-50"
+                      >
+                        Select all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearAiFields}
+                        disabled={aiGenerating}
+                        className="text-xs text-slate-400 hover:text-white disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    {aiError && (
+                      <p className="text-xs text-red-400">{aiError}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleGenerateAi}
+                      disabled={aiGenerating || aiSelectedFields.length === 0}
+                      className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {aiGenerating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {aiGenerating ? "Analyzing…" : "Generate"}
+                    </button>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+            </div>
 
             {/* Title Field */}
             <div className="space-y-2">

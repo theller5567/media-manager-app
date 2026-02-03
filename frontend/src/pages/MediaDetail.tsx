@@ -228,7 +228,7 @@ const MediaDetail = () => {
                     <label className="text-sm font-medium text-slate-400">
                       Uploaded By
                     </label>
-                    <p className="text-white">{uploadedByUser?.name}</p>
+                    <p className="text-white">{uploadedByUser?.email || "Unknown User"}</p>
                   </div>
                 )}
 

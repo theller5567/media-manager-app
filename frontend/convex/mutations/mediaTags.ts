@@ -1,5 +1,7 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import { isDemoUser } from "../lib/auth";
+import { generateFakeMediaTag } from "../lib/demoUtils";
 
 /**
  * Create a new MediaTag
@@ -9,6 +11,11 @@ export const create = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    // Check if user is DemoUser - return fake response without saving
+    if (await isDemoUser(ctx)) {
+      return generateFakeMediaTag(args);
+    }
+    
     // Validate name uniqueness (case-insensitive)
     const normalizedName = args.name.toLowerCase().trim();
     const existingTags = await ctx.db
@@ -44,6 +51,14 @@ export const update = mutation({
       throw new Error(`Tag with id "${args.id}" not found`);
     }
     
+    // Check if user is DemoUser - return fake updated response without saving
+    if (await isDemoUser(ctx)) {
+      return {
+        ...tag,
+        name: args.name.trim(),
+      };
+    }
+    
     // Validate name uniqueness (case-insensitive, excluding current tag)
     const normalizedName = args.name.toLowerCase().trim();
     const existingTags = await ctx.db
@@ -77,6 +92,11 @@ export const deleteTag = mutation({
     const tag = await ctx.db.get(args.id);
     if (!tag) {
       throw new Error(`Tag with id "${args.id}" not found`);
+    }
+    
+    // Check if user is DemoUser - return success without deleting
+    if (await isDemoUser(ctx)) {
+      return { success: true };
     }
     
     await ctx.db.delete(args.id);

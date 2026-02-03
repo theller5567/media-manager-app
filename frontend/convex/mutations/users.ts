@@ -1,6 +1,6 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireRole } from "../lib/auth";
+import { requireAuth, requireRole, isDemoUser } from "../lib/auth";
 
 /**
  * Update user profile (name, avatar, etc.)
@@ -17,6 +17,11 @@ export const updateProfile = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx);
     const userId = user._id.toString();
+    
+    // Check if user is DemoUser - return fake success without saving
+    if (await isDemoUser(ctx)) {
+      return { success: true, userId: user._id };
+    }
     
     // Find existing preferences or create new
     const existingPrefs = await ctx.db
@@ -52,11 +57,17 @@ export const updateProfile = mutation({
 export const updateRole = mutation({
   args: {
     userId: v.string(),
-    role: v.union(v.literal("user"), v.literal("admin")),
+    role: v.union(v.literal("user"), v.literal("admin"), v.literal("demoUser")),
   },
   handler: async (ctx, args) => {
     // Require admin role
     await requireRole(ctx, "admin");
+    
+    // Prevent DemoUser from changing roles (explicit check)
+    const user = await requireAuth(ctx);
+    if (await isDemoUser(ctx)) {
+      throw new Error("DemoUser cannot change roles");
+    }
     
     // Note: BetterAuth doesn't have built-in role management
     // This would need to be implemented via custom user extension or separate roles table

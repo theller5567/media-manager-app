@@ -1,5 +1,7 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { isDemoUser } from "../lib/auth";
+import { generateFakeMediaType } from "../lib/demoUtils";
 
 /**
  * Create a new MediaType
@@ -43,6 +45,11 @@ export const create = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    // Check if user is DemoUser - return fake response without saving
+    if (await isDemoUser(ctx)) {
+      return generateFakeMediaType(args);
+    }
+    
     // Validate name uniqueness (case-insensitive)
     const normalizedName = args.name.toLowerCase().trim();
     const existingMediaTypes = await ctx.db
@@ -158,6 +165,20 @@ export const update = mutation({
       throw new Error(`MediaType with id ${args.id} not found`);
     }
     
+    // Check if user is DemoUser - return fake updated response without saving
+    if (await isDemoUser(ctx)) {
+      return {
+        ...existingMediaType,
+        ...(args.name !== undefined && { name: args.name.trim() }),
+        ...(args.description !== undefined && { description: args.description }),
+        ...(args.color !== undefined && { color: args.color }),
+        ...(args.allowedFormats !== undefined && { allowedFormats: args.allowedFormats }),
+        ...(args.fields !== undefined && { fields: args.fields }),
+        ...(args.defaultTags !== undefined && { defaultTags: args.defaultTags }),
+        ...(args.dimensionConstraints !== undefined && { dimensionConstraints: args.dimensionConstraints }),
+      };
+    }
+    
     // Validate name uniqueness if name is being updated
     if (args.name !== undefined) {
       const normalizedName = args.name.toLowerCase().trim();
@@ -255,6 +276,11 @@ export const deleteMediaType = mutation({
     const mediaType = await ctx.db.get(args.id);
     if (!mediaType) {
       throw new Error(`MediaType with id ${args.id} not found`);
+    }
+    
+    // Check if user is DemoUser - return success without deleting
+    if (await isDemoUser(ctx)) {
+      return true;
     }
     
     // Check usage count (customMediaTypeId is stored as string, Convex IDs are strings)

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/BaseLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { DemoModeBanner } from '@/components/layout/DemoModeBanner'
 import MediaLibrary from '@/pages/MediaLibrary'
 import MediaTypeCreator from '@/pages/MediaTypeCreator'
 import MediaDetail from '@/pages/MediaDetail'
@@ -35,6 +36,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
+      <DemoModeBanner />
       <Routes>
         <Route 
           path="/login" 

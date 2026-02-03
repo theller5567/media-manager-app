@@ -285,9 +285,9 @@ const TagManagement = () => {
           )}
 
           {/* Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto bg-slate-800 p-4 rounded-sm">
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto bg-slate-800 rounded-sm overflow-hidden">
             {showForm ? (
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-6xl mx-auto p-4">
                 {submitError && (
                     <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/50">
                         <p className="text-sm text-red-400">{submitError}</p>
@@ -302,7 +302,7 @@ const TagManagement = () => {
                 />
             </div>
             ) : (
-            <div className="max-w-7xl mx-auto">
+            <><div className="max-w-7xl mx-auto p-4">
                 <MediaTagList
                     tags={allTags}
                     usageCounts={usageCounts}
@@ -311,7 +311,10 @@ const TagManagement = () => {
                     onViewMedia={handleViewMedia}
                 />
             </div>
+            <div className="sticky bottom-0 left-0 h-15 w-full bg-linear-to-t from-slate-900 to-transparent z-10"></div>
+            </>
             )}
+            
           </div>
 
           {/* Tag Detail Dialog */}

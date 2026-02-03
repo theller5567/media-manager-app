@@ -17,7 +17,7 @@ export async function requireAuth(ctx: QueryCtx | MutationCtx) {
  */
 export async function requireRole(
   ctx: QueryCtx | MutationCtx,
-  role: "user" | "admin"
+  role: "user" | "admin" | "demoUser"
 ) {
   const user = await requireAuth(ctx);
   
@@ -55,4 +55,17 @@ export async function isAdmin(ctx: QueryCtx | MutationCtx): Promise<boolean> {
   // Check admin status - can be enhanced with proper role system
   return user.email === process.env.ADMIN_EMAIL || 
          (user as any).role === "admin";
+}
+
+/**
+ * Check if current user is DemoUser
+ * DemoUser can use all UI features but mutations won't persist to database
+ */
+export async function isDemoUser(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+  const user = await getCurrentUser(ctx);
+  if (!user) return false;
+  
+  // Check DemoUser status via environment variable OR user role field
+  return user.email === process.env.DEMO_USER_EMAIL || 
+         (user as any).role === "demoUser";
 }

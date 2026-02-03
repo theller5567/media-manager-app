@@ -15,6 +15,7 @@ import type * as actions_migrateMockData from "../actions/migrateMockData.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_demoUtils from "../lib/demoUtils.js";
 import type * as mutations_media from "../mutations/media.js";
 import type * as mutations_mediaTags from "../mutations/mediaTags.js";
 import type * as mutations_mediaTypes from "../mutations/mediaTypes.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/demoUtils": typeof lib_demoUtils;
   "mutations/media": typeof mutations_media;
   "mutations/mediaTags": typeof mutations_mediaTags;
   "mutations/mediaTypes": typeof mutations_mediaTypes;

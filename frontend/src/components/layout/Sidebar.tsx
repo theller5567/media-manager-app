@@ -27,6 +27,8 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
   
   // Check admin status server-side
   const isAdmin = useQuery(api.queries.users.checkIsAdmin) ?? false
+  // Check if user is DemoUser
+  const isDemoUser = useQuery(api.queries.users.checkIsDemoUser) ?? false
 
   const handleLogout = async () => {
     try {
@@ -39,9 +41,10 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
 
   // Filter nav items based on user role
   const filteredNavItems = navItems.filter((item) => {
-    // Hide admin-only items if user is not admin
+    // Show admin-only items if user is admin OR DemoUser
+    // DemoUser can view these pages but changes won't be persisted
     if (item.href === '/tag-management' || item.href === '/media-type-creator') {
-      return isAdmin
+      return isAdmin || isDemoUser
     }
     return true
   })
@@ -98,6 +101,11 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
                   {isAdmin && (
                     <span className="px-1.5 py-0.5 text-xs font-medium bg-cyan-600 text-white rounded">
                       Admin
+                    </span>
+                  )}
+                  {isDemoUser && !isAdmin && (
+                    <span className="px-1.5 py-0.5 text-xs font-medium bg-amber-600 text-white rounded">
+                      Demo
                     </span>
                   )}
                 </div>

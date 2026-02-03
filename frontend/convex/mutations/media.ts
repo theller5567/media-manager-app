@@ -1,6 +1,7 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { requireAuth, isAdmin } from "../lib/auth";
+import { requireAuth, isAdmin, isDemoUser } from "../lib/auth";
+import { generateFakeMedia } from "../lib/demoUtils";
 
 /**
  * Create a new media item
@@ -38,6 +39,15 @@ export const create = mutation({
   handler: async (ctx, args) => {
     // Require authentication
     const user = await requireAuth(ctx);
+    
+    // Check if user is DemoUser - return fake response without saving
+    if (await isDemoUser(ctx)) {
+      return generateFakeMedia({
+        ...args,
+        uploadedBy: user._id.toString(),
+        isMockData: args.isMockData ?? false,
+      });
+    }
     
     const mediaId = await ctx.db.insert("media", {
       cloudinaryPublicId: args.cloudinaryPublicId,
@@ -95,6 +105,15 @@ export const update = mutation({
       throw new Error("Media not found");
     }
     
+    // Check if user is DemoUser - return fake updated response without saving
+    if (await isDemoUser(ctx)) {
+      return {
+        ...media,
+        ...args.updates,
+        dateModified: args.updates.dateModified ?? media.dateModified,
+      };
+    }
+    
     // Check authorization: user can only edit their own media OR be admin
     const userIsAdmin = await isAdmin(ctx);
     const isOwner = media.uploadedBy === user._id.toString();
@@ -134,6 +153,11 @@ export const deleteMedia = mutation({
     const media = await ctx.db.get(args.id);
     if (!media) {
       throw new Error("Media not found");
+    }
+    
+    // Check if user is DemoUser - return success without deleting
+    if (await isDemoUser(ctx)) {
+      return { success: true };
     }
     
     // Check authorization: user can only delete their own media OR be admin
