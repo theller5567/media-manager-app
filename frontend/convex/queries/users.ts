@@ -5,32 +5,47 @@ import { components } from "../_generated/api";
 import { requireRole, getCurrentUser as getCurrentUserHelper, isAdmin as isAdminHelper, isDemoUser as isDemoUserHelper } from "../lib/auth";
 
 /**
- * Get current authenticated user's profile
+ * Get current authenticated user's profile.
+ * Returns null on any error so the app never crashes when auth is unavailable.
  */
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    return await authComponent.getAuthUser(ctx);
+    try {
+      return await authComponent.getAuthUser(ctx);
+    } catch {
+      return null;
+    }
   },
 });
 
 /**
- * Check if current user is admin
+ * Check if current user is admin.
+ * Returns false on any error so the app never crashes when auth is unavailable.
  */
 export const checkIsAdmin = query({
   args: {},
   handler: async (ctx) => {
-    return await isAdminHelper(ctx);
+    try {
+      return await isAdminHelper(ctx);
+    } catch {
+      return false;
+    }
   },
 });
 
 /**
- * Check if current user is DemoUser
+ * Check if current user is DemoUser.
+ * Returns false on any error (e.g. unauthenticated, auth component config issue) so the app never crashes.
  */
 export const checkIsDemoUser = query({
   args: {},
   handler: async (ctx) => {
-    return await isDemoUserHelper(ctx);
+    try {
+      return await isDemoUserHelper(ctx);
+    } catch {
+      return false;
+    }
   },
 });
 
