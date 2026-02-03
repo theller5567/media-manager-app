@@ -2,8 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2, FolderOpen } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { useAuth } from '@/hooks/useAuth'
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useRoleChecks } from '@/hooks/useRoleChecks'
 import Avatar from '../ui/Avatar'
 
 const navItems = [
@@ -24,10 +23,7 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { currentUser, isLoading, isAuthenticated, signOut } = useAuth()
-  
-  // Only run auth queries when authenticated so we never hit the auth component for logged-out users
-  const isAdmin = useQuery(api.queries.users.checkIsAdmin, isAuthenticated ? {} : "skip") ?? false
-  const isDemoUser = useQuery(api.queries.users.checkIsDemoUser, isAuthenticated ? {} : "skip") ?? false
+  const { isAdmin, isDemoUser } = useRoleChecks()
 
   const handleLogout = async () => {
     try {

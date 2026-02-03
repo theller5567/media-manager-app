@@ -11,6 +11,7 @@ import ThumbnailChangeDialog from "@/components/media/ThumbnailChangeDialog";
 import DownloadDialog from "@/components/media/DownloadDialog";
 import ReactPlayer from "react-player";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoleChecks } from "@/hooks/useRoleChecks";
 import { canEditMedia, canDeleteMedia } from "@/lib/rbac";
 import type { User } from "@/lib/rbac";
 import Header from "@/components/layout/Header";
@@ -21,7 +22,8 @@ const MediaDetail = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
+  const { isAdmin: userIsAdmin } = useRoleChecks();
 
   const mediaDoc = useQuery(
     api.queries.media.getById,
@@ -29,12 +31,6 @@ const MediaDetail = () => {
   );
 
   const deleteMediaMutation = useMutation(api.mutations.media.deleteMedia);
-
-  // Only run when authenticated so we never hit the auth component for logged-out users
-  const userIsAdmin = useQuery(
-    api.queries.users.checkIsAdmin,
-    isAuthenticated ? {} : "skip"
-  );
 
   // Query for uploadedByUser - must be called before early returns to follow Rules of Hooks
   const uploadedByUser = useQuery(

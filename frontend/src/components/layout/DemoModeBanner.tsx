@@ -1,21 +1,14 @@
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useRoleChecks } from "@/hooks/useRoleChecks";
 import { AlertTriangle } from "lucide-react";
 
 /**
  * Demo Mode Banner Component
- * Displays a warning banner when the current user is in demo mode
+ * Displays a warning banner when the current user is in demo mode.
+ * Uses client-side session (useRoleChecks) so we never call the Convex auth component.
  */
 export function DemoModeBanner() {
-  const { isAuthenticated } = useAuth();
-  // Only run the query when authenticated so we never hit the auth component for logged-out users
-  const isDemoUser = useQuery(
-    api.queries.users.checkIsDemoUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const { isDemoUser } = useRoleChecks();
 
-  // Don't render if not demo user or still loading
   if (!isDemoUser) {
     return null;
   }
