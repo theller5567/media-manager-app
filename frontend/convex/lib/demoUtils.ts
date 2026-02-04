@@ -45,6 +45,8 @@ export function generateFakeMedia(args: {
   isMockData?: boolean;
   mockSourceId?: string;
   uploadedBy: string;
+  uploadedByEmail?: string;
+  uploadedByName?: string;
 }) {
   const fakeId = generateFakeId("media");
   const now = Date.now();
@@ -74,6 +76,8 @@ export function generateFakeMedia(args: {
     isMockData: args.isMockData ?? false,
     mockSourceId: args.mockSourceId,
     uploadedBy: args.uploadedBy,
+    uploadedByEmail: args.uploadedByEmail,
+    uploadedByName: args.uploadedByName,
   };
 }
 

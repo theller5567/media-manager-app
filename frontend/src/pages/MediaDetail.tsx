@@ -32,12 +32,6 @@ const MediaDetail = () => {
 
   const deleteMediaMutation = useMutation(api.mutations.media.deleteMedia);
 
-  // Query for uploadedByUser - must be called before early returns to follow Rules of Hooks
-  const uploadedByUser = useQuery(
-    api.queries.users.getUserById,
-    mediaDoc?.uploadedBy ? { userId: mediaDoc.uploadedBy } : "skip"
-  );
-
   // Convert Convex document to MediaItem format
   const media = mediaDoc
     ? {
@@ -62,6 +56,8 @@ const MediaDetail = () => {
         aiGenerated: mediaDoc.aiGenerated,
         dateModified: new Date(mediaDoc.dateModified),
         uploadedBy: mediaDoc.uploadedBy,
+        uploadedByEmail: (mediaDoc as any).uploadedByEmail,
+        uploadedByName: (mediaDoc as any).uploadedByName,
       }
     : null;
 
@@ -221,12 +217,16 @@ const MediaDetail = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold text-white mb-2">Details</h2>
               <div className="space-y-3">
-                {media.uploadedBy && (
+                {(media.uploadedByEmail || media.uploadedByName) && (
                   <div>
                     <label className="text-sm font-medium text-slate-400">
                       Uploaded By
                     </label>
-                    <p className="text-white">{uploadedByUser?.email || "Unknown User"}</p>
+                    <p className="text-white">
+                      {media.uploadedByName ||
+                        media.uploadedByEmail ||
+                        "Unknown User"}
+                    </p>
                   </div>
                 )}
 

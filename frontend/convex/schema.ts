@@ -48,6 +48,9 @@ export default defineSchema({
     
     // User tracking - BetterAuth component table IDs stored as strings
     uploadedBy: v.optional(v.string()),
+    // Denormalized uploader info for display (avoids extra BetterAuth lookups)
+    uploadedByEmail: v.optional(v.string()),
+    uploadedByName: v.optional(v.string()),
   })
     .index("by_mediaType", ["mediaType"])
     .index("by_customMediaTypeId", ["customMediaTypeId"])

@@ -26,6 +26,8 @@ export interface MediaItem {
   customMetadata?: Record<string, any>; // Custom field values
   aiGenerated?: boolean;
   uploadedBy?: string; // ID of the user who uploaded this media
+  uploadedByEmail?: string;
+  uploadedByName?: string;
 }
 
 /**

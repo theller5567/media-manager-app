@@ -41,10 +41,16 @@ export const create = mutation({
     const user = await requireAuth(ctx);
     
     // Check if user is DemoUser - return fake response without saving
+    const userId = user._id.toString();
+    const userEmail = (user as any).email as string | undefined;
+    const userName = (user as any).name as string | undefined;
+    
     if (await isDemoUser(ctx)) {
       return generateFakeMedia({
         ...args,
-        uploadedBy: user._id.toString(),
+        uploadedBy: userId,
+        uploadedByEmail: userEmail,
+        uploadedByName: userName,
         isMockData: args.isMockData ?? false,
       });
     }
@@ -71,7 +77,9 @@ export const create = mutation({
       dateModified: args.dateModified,
       isMockData: args.isMockData ?? false,
       mockSourceId: args.mockSourceId,
-      uploadedBy: user._id.toString(), // Track who uploaded this media (convert ID to string)
+      uploadedBy: userId, // Track who uploaded this media (BetterAuth user ID as string)
+      uploadedByEmail: userEmail,
+      uploadedByName: userName,
     });
     
     return await ctx.db.get(mediaId);
@@ -205,6 +213,8 @@ export const createInternal = internalMutation({
     isMockData: v.optional(v.boolean()),
     mockSourceId: v.optional(v.string()),
     uploadedBy: v.optional(v.string()), // BetterAuth user ID (component table ID as string)
+    uploadedByEmail: v.optional(v.string()),
+    uploadedByName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const insertData: any = {
@@ -232,6 +242,12 @@ export const createInternal = internalMutation({
     };
     if (args.uploadedBy) {
       insertData.uploadedBy = args.uploadedBy as any; // Cast string to BetterAuth user ID type
+    }
+    if (args.uploadedByEmail) {
+      insertData.uploadedByEmail = args.uploadedByEmail;
+    }
+    if (args.uploadedByName) {
+      insertData.uploadedByName = args.uploadedByName;
     }
     const mediaId = await ctx.db.insert("media", insertData);
     
