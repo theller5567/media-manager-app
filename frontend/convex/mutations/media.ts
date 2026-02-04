@@ -1,6 +1,6 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { requireAuth, isAdmin, isDemoUser } from "../lib/auth";
+import { requireAuth, isAdmin } from "../lib/auth";
 import { generateFakeMedia } from "../lib/demoUtils";
 
 /**
@@ -39,13 +39,16 @@ export const create = mutation({
   handler: async (ctx, args) => {
     // Require authentication
     const user = await requireAuth(ctx);
-    
-    // Check if user is DemoUser - return fake response without saving
     const userId = user._id.toString();
     const userEmail = (user as any).email as string | undefined;
     const userName = (user as any).name as string | undefined;
-    
-    if (await isDemoUser(ctx)) {
+
+    // Demo users must never persist: return fake response without saving.
+    // Check using the user we already have (don't call isDemoUser(ctx) which can fail in prod).
+    const isDemo =
+      (process.env.DEMO_USER_EMAIL && userEmail === process.env.DEMO_USER_EMAIL) ||
+      (user as any).role === "demoUser";
+    if (isDemo) {
       return generateFakeMedia({
         ...args,
         uploadedBy: userId,
@@ -54,7 +57,7 @@ export const create = mutation({
         isMockData: args.isMockData ?? false,
       });
     }
-    
+
     const mediaId = await ctx.db.insert("media", {
       cloudinaryPublicId: args.cloudinaryPublicId,
       cloudinarySecureUrl: args.cloudinarySecureUrl,
@@ -104,24 +107,24 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    // Require authentication
     const user = await requireAuth(ctx);
-    
-    // Get the media item to check ownership
     const media = await ctx.db.get(args.id);
     if (!media) {
       throw new Error("Media not found");
     }
-    
-    // Check if user is DemoUser - return fake updated response without saving
-    if (await isDemoUser(ctx)) {
+
+    // Demo users must never persist: return fake updated response without saving
+    const isDemo =
+      (process.env.DEMO_USER_EMAIL && (user as any).email === process.env.DEMO_USER_EMAIL) ||
+      (user as any).role === "demoUser";
+    if (isDemo) {
       return {
         ...media,
         ...args.updates,
         dateModified: args.updates.dateModified ?? media.dateModified,
       };
     }
-    
+
     // Check authorization: user can only edit their own media OR be admin
     const userIsAdmin = await isAdmin(ctx);
     const isOwner = media.uploadedBy === user._id.toString();
@@ -154,20 +157,20 @@ export const update = mutation({
 export const deleteMedia = mutation({
   args: { id: v.id("media") },
   handler: async (ctx, args) => {
-    // Require authentication
     const user = await requireAuth(ctx);
-    
-    // Get the media item to check ownership
     const media = await ctx.db.get(args.id);
     if (!media) {
       throw new Error("Media not found");
     }
-    
-    // Check if user is DemoUser - return success without deleting
-    if (await isDemoUser(ctx)) {
+
+    // Demo users must never persist: return success without deleting
+    const isDemo =
+      (process.env.DEMO_USER_EMAIL && (user as any).email === process.env.DEMO_USER_EMAIL) ||
+      (user as any).role === "demoUser";
+    if (isDemo) {
       return { success: true };
     }
-    
+
     // Check authorization: user can only delete their own media OR be admin
     const userIsAdmin = await isAdmin(ctx);
     const isOwner = media.uploadedBy === user._id.toString();
