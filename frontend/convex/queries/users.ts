@@ -62,32 +62,29 @@ export const checkIsDemoUser = query({
 export const getUserById = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // Require authentication (but not admin)
-    const currentUser = await getCurrentUserHelper(ctx);
-    if (!currentUser) {
-      throw new Error("Authentication required");
-    }
-    
-    // Use BetterAuth component's findOne to query the user table
-    // This allows any authenticated user to view user info for display purposes
+    // This query is used only for display (\"Uploaded By\").
+    // It must NEVER crash the app; on any error we just return null so the UI
+    // can show \"Unknown User\" instead of throwing a server error.
     try {
-      const user = await ctx.runQuery(
-        components.betterAuth.adapter.findOne,
-        {
-          model: "user",
-          where: [
-            {
-              field: "_id",
-              operator: "eq",
-              value: args.userId,
-            },
-          ],
-        }
-      );
-      return user;
-    } catch (error) {
-      // If user not found or error, return null gracefully
-      // Frontend will handle null case (e.g., show "Unknown User" or hide the field)
+      const currentUser = await getCurrentUserHelper(ctx);
+      if (!currentUser) {
+        return null;
+      }
+
+      const user = await ctx.runQuery(components.betterAuth.adapter.findOne, {
+        model: "user",
+        where: [
+          {
+            field: "_id",
+            operator: "eq",
+            value: args.userId,
+          },
+        ],
+      });
+      return user ?? null;
+    } catch {
+      // If user not found or any error occurs, return null gracefully.
+      // Frontend will handle null case (e.g., show "Unknown User" or hide the field).
       return null;
     }
   },

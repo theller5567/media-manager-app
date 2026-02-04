@@ -47,7 +47,8 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
   return (
     <div className="flex h-full flex-col bg-slate-900 text-white w-64">
       <div className="p-6">
-        <h1 className="text-xl font-bold tracking-tight text-cyan-400">Media Manager</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-cyan-400">Synapse</h1>
+        <p className="text-xs text-slate-400">Your AI-powered media manager</p>
       </div>
       
       <nav className="flex-1 space-y-1 px-3">
