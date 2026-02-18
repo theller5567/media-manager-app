@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2, FolderOpen } from 'lucide-react'
+import { LayoutDashboard, Library, Tag, User, Settings, Plus, LogOut, Loader2, FolderOpen, Users } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { useAuth } from '@/hooks/useAuth'
 import { useRoleChecks } from '@/hooks/useRoleChecks'
@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Tag Management', href: '/tag-management', icon: Tag },
   { label: 'Media Type Creator', href: '/media-type-creator', icon: Plus },
   { label: 'Profile', href: '/profile', icon: User },
+  { label:'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
